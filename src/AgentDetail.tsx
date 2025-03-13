@@ -2,11 +2,62 @@ import React, { useEffect, useState } from 'react';
 import { useSuiClient, useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 import { useParams, useNavigate } from 'react-router-dom';
 import { type SuiObjectResponse } from '@mysten/sui/client';
-import { Typography, Skeleton, Button, Descriptions, Card, Tag, Divider, message, Tooltip, Progress, List, Empty, Row, Col, Space } from 'antd';
-import { ArrowLeftOutlined, CopyOutlined, WalletOutlined, HeartOutlined, LockOutlined, ClockCircleOutlined, PlusOutlined, ToolOutlined, SaveOutlined, ArrowRightOutlined, ArrowLeftOutlined as ArrowLeft } from '@ant-design/icons';
+import { Typography, Skeleton, Button, Descriptions, Card, Tag, Divider, message, Tooltip, Progress, List, Empty, Row, Col, Space, Tabs, Collapse } from 'antd';
+import { ArrowLeftOutlined, CopyOutlined, WalletOutlined, HeartOutlined, LockOutlined, ClockCircleOutlined, PlusOutlined, ToolOutlined, SaveOutlined, ArrowRightOutlined, ArrowLeftOutlined as ArrowLeft, SafetyCertificateOutlined, CodeOutlined, FileTextOutlined } from '@ant-design/icons';
 import './styles.css';
 import { apiClient } from './api/apiClient';
 import { RoleManager } from '@anemonelab/sui-sdk';
+
+// 定义Attestation类型
+interface Certificate {
+  subject: {
+    common_name: string;
+    organization: string | null;
+    country: string | null;
+    state: string | null;
+    locality: string | null;
+  };
+  issuer: {
+    common_name: string;
+    organization: string;
+    country: string | null;
+  };
+  serial_number: string;
+  not_before: string;
+  not_after: string;
+  version: string;
+  fingerprint: string;
+  signature_algorithm: string;
+  sans: any | null;
+  is_ca: boolean;
+  position_in_chain: number;
+  quote: string | null;
+}
+
+interface EventLog {
+  imr: number;
+  event_type: number;
+  digest: string;
+  event: string;
+  event_payload: string;
+}
+
+interface AttestationResponse {
+  is_online: boolean;
+  is_public: boolean;
+  error: string | null;
+  app_certificates: Certificate[];
+  tcb_info: {
+    mrtd: string;
+    rootfs_hash: string;
+    rtmr0: string;
+    rtmr1: string;
+    rtmr2: string;
+    rtmr3: string;
+    event_log: EventLog[];
+  };
+  compose_file: string;
+}
 
 // Agent相关类型定义
 interface Agent {
@@ -34,6 +85,7 @@ interface RoleData {
   balance: bigint;
   bot_address: string;
   skills?: string[];
+  app_id?: string;
 }
 
 // 完整Agent详情类型
@@ -83,16 +135,59 @@ export function AgentDetail() {
   const [availableSkills, setAvailableSkills] = useState<Skill[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [savingSkills, setSavingSkills] = useState(false);
+  const [activeTabKey, setActiveTabKey] = useState<string>("info");
+  const [attestation, setAttestation] = useState<AttestationResponse | null>(null);
+  const [attestationLoading, setAttestationLoading] = useState(false);
   const navigate = useNavigate();
   const suiClient = useSuiClient();
   const currentAccount = useCurrentAccount();
   const { mutate: signAndExecute } = useSignAndExecuteTransaction();
+  const { Panel } = Collapse;
 
   useEffect(() => {
     if (roleId) {
       fetchAgentDetailsByRoleId(roleId);
     }
   }, [roleId]);
+
+  // 新增：获取CVM证明信息
+  const fetchCvmAttestation = async (appId: string) => {
+    if (!appId) {
+      message.error('无法获取证明信息：缺少App ID');
+      return;
+    }
+    
+    setAttestationLoading(true);
+    try {
+      // 使用后端API获取证明信息
+      const response = await fetch(`http://localhost:3000/cvm/attestation/${appId}`);
+      
+      if (!response.ok) {
+        throw new Error(`获取证明信息失败: ${response.status}`);
+      }
+      
+      const attestationData = await response.json();
+      console.log('获取到CVM证明信息:', attestationData);
+      
+      if (attestationData.success && attestationData.data) {
+        setAttestation(attestationData.data);
+      } else {
+        throw new Error(attestationData.message || '获取证明信息失败');
+      }
+    } catch (error) {
+      console.error('获取CVM证明信息失败:', error);
+      message.error('获取CVM证明信息失败');
+    } finally {
+      setAttestationLoading(false);
+    }
+  };
+
+  // 当标签页切换到证明信息标签页时，自动获取证明信息
+  useEffect(() => {
+    if (activeTabKey === "attestation" && agent?.roleData?.app_id && !attestation) {
+      fetchCvmAttestation(agent.roleData.app_id);
+    }
+  }, [activeTabKey, agent?.roleData?.app_id, attestation]);
 
   // 根据roleId获取Agent详情
   const fetchAgentDetailsByRoleId = async (roleId: string) => {
@@ -310,7 +405,8 @@ export function AgentDetail() {
         inactive_epochs: BigInt(fields.inactive_epochs || 0),
         balance: fields.balance && fields.balance.value ? BigInt(fields.balance.value) : BigInt(0),
         bot_address: fields.bot_address || '',
-        skills: skills
+        skills: skills,
+        app_id: fields.app_id || undefined
       };
       console.log("处理后的Role数据:", {...roleData, health: roleData.health.toString(), balance: roleData.balance.toString()});
       return roleData;
@@ -395,7 +491,7 @@ export function AgentDetail() {
   };
 
   // 复制文本到剪贴板
-  const handleCopy = (text: string) => {
+  const handleCopy = (text: string | undefined) => {
     if (!text) return;
     
     navigator.clipboard.writeText(text)
@@ -712,6 +808,320 @@ export function AgentDetail() {
     }
   }, [agent?.roleData?.skills]);
 
+  // 渲染证明信息标签页内容
+  const renderAttestationTab = () => {
+    if (attestationLoading) {
+      return <Skeleton active paragraph={{ rows: 10 }} />;
+    }
+    
+    if (!attestation) {
+      return (
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={
+            <span style={{ color: "#9ca3af" }}>
+              无法获取CVM证明信息，可能原因：
+              <ul style={{ textAlign: "left", marginTop: "10px" }}>
+                <li>CVM未部署或离线</li>
+                <li>没有App ID信息</li>
+                <li>网络连接问题</li>
+              </ul>
+            </span>
+          }
+        />
+      );
+    }
+    
+    return (
+      <div className="space-y-6">
+        {/* TCB信息部分 */}
+        <Card
+          style={{ backgroundColor: "#1f2937", borderColor: "#374151" }}
+          headStyle={{ backgroundColor: "#111827", borderBottom: "1px solid #374151" }}
+          title={
+            <Typography.Title level={4} style={{ color: "white", margin: 0 }}>
+              <SafetyCertificateOutlined style={{ marginRight: "8px" }} />
+              TCB信息
+            </Typography.Title>
+          }
+        >
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 border border-gray-700 rounded">
+              <span className="text-gray-300">MRTD</span>
+              <div className="flex items-center">
+                <span className="text-gray-300 text-sm font-mono">{attestation.tcb_info.mrtd}</span>
+                <CopyOutlined 
+                  style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }} 
+                  onClick={() => handleCopy(attestation.tcb_info.mrtd)}
+                />
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-between p-3 border border-gray-700 rounded">
+              <span className="text-gray-300">RootFS Hash</span>
+              <div className="flex items-center">
+                <span className="text-gray-300 text-sm font-mono">{attestation.tcb_info.rootfs_hash}</span>
+                <CopyOutlined 
+                  style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
+                  onClick={() => handleCopy(attestation.tcb_info.rootfs_hash)}
+                />
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-between p-3 border border-gray-700 rounded">
+              <span className="text-gray-300">RTMR0</span>
+              <div className="flex items-center">
+                <span className="text-gray-300 text-sm font-mono">{attestation.tcb_info.rtmr0}</span>
+                <CopyOutlined 
+                  style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
+                  onClick={() => handleCopy(attestation.tcb_info.rtmr0)}
+                />
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-between p-3 border border-gray-700 rounded">
+              <span className="text-gray-300">RTMR1</span>
+              <div className="flex items-center">
+                <span className="text-gray-300 text-sm font-mono">{attestation.tcb_info.rtmr1}</span>
+                <CopyOutlined 
+                  style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
+                  onClick={() => handleCopy(attestation.tcb_info.rtmr1)}
+                />
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-between p-3 border border-gray-700 rounded">
+              <span className="text-gray-300">RTMR2</span>
+              <div className="flex items-center">
+                <span className="text-gray-300 text-sm font-mono">{attestation.tcb_info.rtmr2}</span>
+                <CopyOutlined 
+                  style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
+                  onClick={() => handleCopy(attestation.tcb_info.rtmr2)}
+                />
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-between p-3 border border-gray-700 rounded">
+              <span className="text-gray-300">RTMR3</span>
+              <div className="flex items-center">
+                <span className="text-gray-300 text-sm font-mono">{attestation.tcb_info.rtmr3}</span>
+                <CopyOutlined 
+                  style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
+                  onClick={() => handleCopy(attestation.tcb_info.rtmr3)}
+                />
+              </div>
+            </div>
+            
+            <Collapse
+              style={{ backgroundColor: "#1f2937", borderColor: "#374151" }}
+              expandIconPosition="end"
+            >
+              <Panel 
+                header={
+                  <Typography.Text style={{ color: "white" }}>
+                    Event Log
+                  </Typography.Text>
+                }
+                key="eventLog" 
+                style={{ backgroundColor: "#111827", borderColor: "#374151" }}
+              >
+                {attestation.tcb_info.event_log.filter(event => event.event).map((event, index: number) => (
+                  <div key={index} className="flex justify-between items-center mb-2 p-2 border border-gray-700 rounded">
+                    <span className="text-gray-300">{event.event}</span>
+                    <div className="flex items-center">
+                      <span className="text-gray-300 text-sm font-mono truncate max-w-md">{event.event_payload}</span>
+                      <CopyOutlined 
+                        style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
+                        onClick={() => handleCopy(event.event_payload)}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </Panel>
+            </Collapse>
+          </div>
+        </Card>
+        
+        {/* App Compose部分 */}
+        <Card
+          style={{ backgroundColor: "#1f2937", borderColor: "#374151" }}
+          headStyle={{ backgroundColor: "#111827", borderBottom: "1px solid #374151" }}
+          title={
+            <Typography.Title level={4} style={{ color: "white", margin: 0 }}>
+              <CodeOutlined style={{ marginRight: "8px" }} />
+              App Compose
+            </Typography.Title>
+          }
+        >
+          <div className="bg-gray-800 p-4 rounded-lg overflow-auto max-h-96">
+            <pre className="text-white">
+              {attestation.compose_file}
+            </pre>
+          </div>
+        </Card>
+        
+        {/* 证书链部分 */}
+        <Card 
+          style={{ backgroundColor: "#1f2937", borderColor: "#374151" }}
+          headStyle={{ backgroundColor: "#111827", borderBottom: "1px solid #374151" }}
+          title={
+            <Typography.Title level={4} style={{ color: "white", margin: 0 }}>
+              <FileTextOutlined style={{ marginRight: "8px" }} />
+              证书链
+            </Typography.Title>
+          }
+        >
+          <Collapse
+            style={{ backgroundColor: "#1f2937", borderColor: "#374151" }}
+            expandIconPosition="end"
+            defaultActiveKey={['appCert']}
+          >
+            {/* 应用证书 */}
+            <Panel 
+              header={
+                <Typography.Text style={{ color: "white" }}>
+                  App Cert
+                </Typography.Text>
+              }
+              key="appCert" 
+              style={{ backgroundColor: "#111827", borderColor: "#374151" }}
+            >
+              {attestation.app_certificates.filter(cert => cert.position_in_chain === 0).map((cert, index: number) => (
+                <div key={index} className="space-y-4 mt-4">
+                  <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
+                    <span className="text-gray-300">Subject</span>
+                    <span className="text-gray-300">
+                      CN: {cert.subject.common_name || "N/A"}
+                    </span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
+                    <span className="text-gray-300">Issuer</span>
+                    <span className="text-gray-300">
+                      CN: {cert.issuer.common_name || "N/A"}
+                      <br />
+                      O: {cert.issuer.organization || "N/A"}
+                    </span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
+                    <span className="text-gray-300">Validity</span>
+                    <span className="text-gray-300">
+                      From: {new Date(cert.not_before).toLocaleDateString()}
+                      <br />
+                      To: {new Date(cert.not_after).toLocaleDateString()}
+                    </span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
+                    <span className="text-gray-300">Serial Number</span>
+                    <div className="flex items-center">
+                      <span className="text-gray-300 text-sm font-mono">{cert.serial_number}</span>
+                      <CopyOutlined 
+                        style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
+                        onClick={() => handleCopy(cert.serial_number)}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
+                    <span className="text-gray-300">Fingerprint</span>
+                    <div className="flex items-center">
+                      <span className="text-gray-300 text-sm font-mono">{cert.fingerprint}</span>
+                      <CopyOutlined 
+                        style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
+                        onClick={() => handleCopy(cert.fingerprint)}
+                      />
+                    </div>
+                  </div>
+                  
+                  {cert.quote && (
+                    <div className="p-2 border border-gray-700 rounded">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-300">Quote</span>
+                        <CopyOutlined 
+                          style={{ cursor: "pointer", color: "#9ca3af" }}
+                          onClick={() => handleCopy(cert.quote || "")}
+                        />
+                      </div>
+                      <div className="bg-gray-800 p-2 mt-2 rounded overflow-auto max-h-32">
+                        <span className="text-gray-300 text-xs font-mono break-all">{cert.quote}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </Panel>
+            
+            {/* KMS证书 */}
+            <Panel 
+              header={
+                <Typography.Text style={{ color: "white" }}>
+                  KMS Cert
+                </Typography.Text>
+              }
+              key="kmsCert" 
+              style={{ backgroundColor: "#111827", borderColor: "#374151" }}
+            >
+              {attestation.app_certificates.filter(cert => cert.position_in_chain === 1).map((cert, index: number) => (
+                <div key={index} className="space-y-4 mt-4">
+                  <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
+                    <span className="text-gray-300">Subject</span>
+                    <span className="text-gray-300">
+                      CN: {cert.subject.common_name || "N/A"}
+                      <br />
+                      O: {cert.subject.organization || "N/A"}
+                    </span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
+                    <span className="text-gray-300">Issuer</span>
+                    <span className="text-gray-300">
+                      CN: {cert.issuer.common_name || "N/A"}
+                      <br />
+                      O: {cert.issuer.organization || "N/A"}
+                    </span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
+                    <span className="text-gray-300">Validity</span>
+                    <span className="text-gray-300">
+                      From: {new Date(cert.not_before).toLocaleDateString()}
+                      <br />
+                      To: {new Date(cert.not_after).toLocaleDateString()}
+                    </span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
+                    <span className="text-gray-300">Serial Number</span>
+                    <div className="flex items-center">
+                      <span className="text-gray-300 text-sm font-mono">{cert.serial_number}</span>
+                      <CopyOutlined 
+                        style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
+                        onClick={() => handleCopy(cert.serial_number)}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
+                    <span className="text-gray-300">Fingerprint</span>
+                    <div className="flex items-center">
+                      <span className="text-gray-300 text-sm font-mono">{cert.fingerprint}</span>
+                      <CopyOutlined 
+                        style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
+                        onClick={() => handleCopy(cert.fingerprint)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </Panel>
+          </Collapse>
+        </Card>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-900 p-6">
       <div className="max-w-7xl mx-auto">
@@ -826,80 +1236,114 @@ export function AgentDetail() {
                 </div>
               </div>
               
-              {/* 详细信息区域 - 独立占据整行 */}
-              <Descriptions
-                bordered
-                column={{ xxl: 3, xl: 3, lg: 2, md: 2, sm: 1, xs: 1 }}
-                labelStyle={{ color: "#9ca3af", backgroundColor: "#111827" }}
-                contentStyle={{ color: "#d1d5db", backgroundColor: "#1f2937" }}
-                style={{ marginTop: "24px" }}
-              >
-                {/* Role ID */}
-                <Descriptions.Item label="Role ID" span={3}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{ wordBreak: "break-all" }}>{agent.role_id}</span>
-                    <CopyOutlined 
-                      style={{ cursor: "pointer", marginLeft: "8px" }} 
-                      onClick={() => handleCopy(agent.role_id)}
-                    />
-                  </div>
-                </Descriptions.Item>
-                
-                {/* NFT ID */}
-                <Descriptions.Item label="NFT ID" span={3}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{ wordBreak: "break-all" }}>{agent.nft_id}</span>
-                    <CopyOutlined 
-                      style={{ cursor: "pointer", marginLeft: "8px" }} 
-                      onClick={() => handleCopy(agent.nft_id)}
-                    />
-                  </div>
-                </Descriptions.Item>
-                
-                {/* 钱包地址 */}
-                <Descriptions.Item label="钱包地址" span={3}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{ wordBreak: "break-all" }}>{agent.address}</span>
-                    <CopyOutlined 
-                      style={{ cursor: "pointer", marginLeft: "8px" }} 
-                      onClick={() => handleCopy(agent.address)}
-                    />
-                  </div>
-                </Descriptions.Item>
-                
-                {/* 所有者 */}
-                <Descriptions.Item label="所有者" span={3}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{ wordBreak: "break-all" }}>{agent.nftData?.owner || "未知"}</span>
-                    {agent.nftData?.owner && (
-                      <CopyOutlined 
-                        className="copy-icon" 
-                        onClick={() => handleCopy(agent.nftData.owner as string)}
-                      />
-                    )}
-                  </div>
-                </Descriptions.Item>
-                
-                {/* 创建时间 */}
-                {agent.created_at && !agent.created_at.includes('1970') && (
-                  <Descriptions.Item label="创建时间" span={3}>
-                    {new Date(agent.created_at).toLocaleString()}
-                  </Descriptions.Item>
-                )}
-                
-                {/* 最后更新纪元 */}
-                <Descriptions.Item label="最后更新纪元" span={3}>
-                  <div style={{ display: "flex", alignItems: "center" }}>
-                    <ClockCircleOutlined style={{ marginRight: "8px" }} />
-                    {agent.roleData?.last_epoch ? String(agent.roleData.last_epoch) : "未知"}
-                  </div>
-                </Descriptions.Item>
-                
-                {/* 不活跃纪元数 */}
-                <Descriptions.Item label="不活跃纪元数" span={3}>
-                  {agent.roleData?.inactive_epochs ? String(agent.roleData.inactive_epochs) : "0"}
-                </Descriptions.Item>
-              </Descriptions>
+              {/* 标签页切换 */}
+              <Tabs
+                activeKey={activeTabKey}
+                onChange={setActiveTabKey}
+                style={{ marginTop: "20px" }}
+                items={[
+                  {
+                    key: "info",
+                    label: "基本信息",
+                    children: (
+                      <>
+                        {/* 详细信息区域 - 独立占据整行 */}
+                        <Descriptions
+                          bordered
+                          column={{ xxl: 3, xl: 3, lg: 2, md: 2, sm: 1, xs: 1 }}
+                          labelStyle={{ color: "#9ca3af", backgroundColor: "#111827" }}
+                          contentStyle={{ color: "#d1d5db", backgroundColor: "#1f2937" }}
+                          style={{ marginTop: "24px" }}
+                        >
+                          {/* Role ID */}
+                          <Descriptions.Item label="Role ID" span={3}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                              <span style={{ wordBreak: "break-all" }}>{agent.role_id}</span>
+                              <CopyOutlined 
+                                style={{ cursor: "pointer", marginLeft: "8px" }} 
+                                onClick={() => handleCopy(agent.role_id)}
+                              />
+                            </div>
+                          </Descriptions.Item>
+                          
+                          {/* NFT ID */}
+                          <Descriptions.Item label="NFT ID" span={3}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                              <span style={{ wordBreak: "break-all" }}>{agent.nft_id}</span>
+                              <CopyOutlined 
+                                style={{ cursor: "pointer", marginLeft: "8px" }} 
+                                onClick={() => handleCopy(agent.nft_id)}
+                              />
+                            </div>
+                          </Descriptions.Item>
+                          
+                          {/* 钱包地址 */}
+                          <Descriptions.Item label="钱包地址" span={3}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                              <span style={{ wordBreak: "break-all" }}>{agent.address}</span>
+                              <CopyOutlined 
+                                style={{ cursor: "pointer", marginLeft: "8px" }} 
+                                onClick={() => handleCopy(agent.address)}
+                              />
+                            </div>
+                          </Descriptions.Item>
+                          
+                          {/* App ID - 新增显示 */}
+                          {agent.roleData?.app_id && (
+                            <Descriptions.Item label="App ID" span={3}>
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                <span style={{ wordBreak: "break-all" }}>{agent.roleData.app_id}</span>
+                                <CopyOutlined 
+                                  style={{ cursor: "pointer", marginLeft: "8px" }} 
+                                  onClick={() => handleCopy(agent.roleData.app_id)}
+                                />
+                              </div>
+                            </Descriptions.Item>
+                          )}
+                          
+                          {/* 所有者 */}
+                          <Descriptions.Item label="所有者" span={3}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                              <span style={{ wordBreak: "break-all" }}>{agent.nftData?.owner || "未知"}</span>
+                              {agent.nftData?.owner && (
+                                <CopyOutlined 
+                                  className="copy-icon" 
+                                  onClick={() => handleCopy(agent.nftData.owner)}
+                                />
+                              )}
+                            </div>
+                          </Descriptions.Item>
+                          
+                          {/* 创建时间 */}
+                          {agent.created_at && !agent.created_at.includes('1970') && (
+                            <Descriptions.Item label="创建时间" span={3}>
+                              {new Date(agent.created_at).toLocaleString()}
+                            </Descriptions.Item>
+                          )}
+                          
+                          {/* 最后更新纪元 */}
+                          <Descriptions.Item label="最后更新纪元" span={3}>
+                            <div style={{ display: "flex", alignItems: "center" }}>
+                              <ClockCircleOutlined style={{ marginRight: "8px" }} />
+                              {agent.roleData?.last_epoch ? String(agent.roleData.last_epoch) : "未知"}
+                            </div>
+                          </Descriptions.Item>
+                          
+                          {/* 不活跃纪元数 */}
+                          <Descriptions.Item label="不活跃纪元数" span={3}>
+                            {agent.roleData?.inactive_epochs ? String(agent.roleData.inactive_epochs) : "0"}
+                          </Descriptions.Item>
+                        </Descriptions>
+                      </>
+                    ),
+                  },
+                  {
+                    key: "attestation",
+                    label: "CVM证明",
+                    children: renderAttestationTab(),
+                  }
+                ]}
+              />
             </Card>
             
             {/* 技能列表卡片 */}
