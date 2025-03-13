@@ -45,6 +45,9 @@ export function AgentMint() {
 
   const handleTradingBotClick = async () => {
     let address: string | undefined;
+    let appId: string | undefined;
+    let cvmId: number | undefined;
+
     try {
         if (!currentAccount) {
             showToast("Please connect your wallet", "error");
@@ -54,7 +57,7 @@ export function AgentMint() {
         setIsLoading(true);
         showToast("Generating address...", "info");
 
-        const response = await fetch("http://localhost:3000/generate-address", {
+        const response = await fetch("http://localhost:3000/generate-agent-address", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -62,12 +65,21 @@ export function AgentMint() {
         });
 
         if (!response.ok) {
-          throw new Error("Failed to generate address");
+          throw new Error("没有可用的CVM，请稍后再试或联系管理员部署更多CVM");
         }
 
         const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error(data.message || "获取地址失败");
+        }
+        
         address = data.address;
+        appId = data.app_id;
+        cvmId = data.cvm_id;
+        
         console.log("Generated Address:", address);
+        console.log("CVM App ID:", appId);
         showToast("Address generated successfully", "info");
     } catch (error) {
         if (error instanceof Error) {
@@ -80,8 +92,9 @@ export function AgentMint() {
     }
 
     console.log('\nCreating role...');
-    if (!address) {
-        showToast("Address is not defined", "error");
+    if (!address || !appId) {
+        showToast("地址或App ID未生成", "error");
+        setIsLoading(false);
         return;
     }
 
@@ -90,6 +103,7 @@ export function AgentMint() {
         agentName,
         agentDescription,
         agentLogo,
+        appId,
         BigInt(100_000_000) // 0.1 SUI
     );
 
@@ -129,6 +143,7 @@ export function AgentMint() {
                         address: address,
                         nft_id: botNftId,
                         role_id: roleId,
+                        cvm_id: cvmId
                     }),
                 });
 
