@@ -147,8 +147,19 @@ export function AgentMint() {
                     }),
                 });
 
+                console.log("NFT Mapping response status:", mappingResponse.status);
+                
                 if (!mappingResponse.ok) {
-                    throw new Error("Failed to store NFT mapping");
+                    const errorText = await mappingResponse.text();
+                    console.error("NFT Mapping error:", errorText);
+                    throw new Error(`Failed to store NFT mapping: ${errorText}`);
+                }
+
+                const mappingData = await mappingResponse.json();
+                console.log("NFT mapping response:", mappingData);
+                
+                if (!mappingData.success) {
+                    throw new Error(mappingData.message || "Failed to store NFT mapping");
                 }
 
                 console.log("NFT mapping stored successfully");
