@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@anemonelab/sui-sdk':
-        specifier: ^1.0.2
-        version: 1.0.2(typescript@5.7.3)
+        specifier: ^1.0.3
+        version: 1.0.3(typescript@5.7.3)
       '@ant-design/icons':
         specifier: ^5.6.1
         version: 5.6.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -141,8 +141,8 @@ packages:
     resolution: {integrity: sha512-30iZtAPgz+LTIYoeivqYo853f02jBYSd5uGnGpkFV0M3xOt9aN73erkgYAmZU43x4VfqcnLxW9Kpg3R5LC4YYw==}
     engines: {node: '>=6.0.0'}
 
-  '@anemonelab/sui-sdk@1.0.2':
-    resolution: {integrity: sha512-uTbzuABqfBd+em9RFpEKffsAOiI0jBwZLmpwdelzaqSuOyzyW5EVoqSz1LzSl7QAmN7i4prbDQ/RiSCva4Ekqg==}
+  '@anemonelab/sui-sdk@1.0.3':
+    resolution: {integrity: sha512-PMVTfuGdCkVHK0k9pW0sIfbi6xlYc0O392PJkL3qgcsJ/aQ2h6j26NkKbZckzIdm0qBlrHKPDpqnJM6QgdfcEQ==}
 
   '@ant-design/colors@7.2.0':
     resolution: {integrity: sha512-bjTObSnZ9C/O8MB/B4OUtd/q9COomuJAR2SYfhxLyHvCKn4EKwCN3e+fWGMo7H5InAyV0wL17jdE9ALrdOW/6A==}
@@ -3429,7 +3429,7 @@ snapshots:
       '@jridgewell/gen-mapping': 0.3.8
       '@jridgewell/trace-mapping': 0.3.25
 
-  '@anemonelab/sui-sdk@1.0.2(typescript@5.7.3)':
+  '@anemonelab/sui-sdk@1.0.3(typescript@5.7.3)':
     dependencies:
       '@mysten/sui': 1.14.2(typescript@5.7.3)
     transitivePeerDependencies:

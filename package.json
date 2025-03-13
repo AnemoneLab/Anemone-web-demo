@@ -12,7 +12,7 @@
     "dev:all": "concurrently \"npm run dev\" \"npm run server\""
   },
   "dependencies": {
-    "@anemonelab/sui-sdk": "^1.0.2",
+    "@anemonelab/sui-sdk": "^1.0.3",
     "@ant-design/icons": "^5.6.1",
     "@mysten/dapp-kit": "0.14.30",
     "@mysten/sui": "1.14.2",
