@@ -939,21 +939,13 @@ export function AgentDetail() {
             </div>
             
             {attestation.tcb_info.event_log && attestation.tcb_info.event_log.length > 0 && (
-              <Collapse
-                style={{ backgroundColor: "#1f2937", borderColor: "#374151" }}
-                expandIconPosition="end"
-              >
-                <Panel 
-                  header={
-                    <Typography.Text style={{ color: "white" }}>
-                      Event Log
-                    </Typography.Text>
-                  }
-                  key="eventLog" 
-                  style={{ backgroundColor: "#111827", borderColor: "#374151" }}
-                >
+              <div className="mt-4">
+                <Typography.Title level={5} style={{ color: "white", marginBottom: "16px" }}>
+                  Event Log
+                </Typography.Title>
+                <div className="space-y-2">
                   {attestation.tcb_info.event_log.filter(event => event.event).map((event, index: number) => (
-                    <div key={index} className="flex justify-between items-center mb-2 p-2 border border-gray-700 rounded">
+                    <div key={index} className="flex justify-between items-center mb-2 p-2 border border-gray-700 rounded bg-gray-800">
                       <span className="text-gray-300">{event.event}</span>
                       <div className="flex items-center">
                         <span className="text-gray-300 text-sm font-mono truncate max-w-md">{event.event_payload}</span>
@@ -964,8 +956,8 @@ export function AgentDetail() {
                       </div>
                     </div>
                   ))}
-                </Panel>
-              </Collapse>
+                </div>
+              </div>
             )}
           </div>
         </Card>
@@ -1002,77 +994,77 @@ export function AgentDetail() {
               </Typography.Title>
             }
           >
-            <Collapse
-              style={{ backgroundColor: "#1f2937", borderColor: "#374151" }}
-              expandIconPosition="end"
-              defaultActiveKey={['appCert']}
-            >
-              {/* 应用证书 */}
-              {attestation.app_certificates.filter(cert => cert.position_in_chain === 0).length > 0 && (
-                <Panel 
-                  header={
-                    <Typography.Text style={{ color: "white" }}>
-                      App Cert
-                    </Typography.Text>
-                  }
-                  key="appCert" 
-                  style={{ backgroundColor: "#111827", borderColor: "#374151" }}
-                >
-                  {attestation.app_certificates.filter(cert => cert.position_in_chain === 0).map((cert, index: number) => (
-                    <div key={index} className="space-y-4 mt-4">
-                      <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
-                        <span className="text-gray-300">Subject</span>
-                        <span className="text-gray-300">
-                          CN: {cert.subject?.common_name || "N/A"}
-                        </span>
+            {/* 应用证书 */}
+            {attestation.app_certificates.filter(cert => cert.position_in_chain === 0).length > 0 && (
+              <div className="mb-6">
+                <Typography.Title level={5} style={{ color: "white", marginBottom: "16px" }}>
+                  App Cert
+                </Typography.Title>
+                {attestation.app_certificates.filter(cert => cert.position_in_chain === 0).map((cert, index: number) => (
+                  <div key={index} className="space-y-4 mt-4">
+                    <div className="flex justify-between items-center p-2 border border-gray-700 rounded bg-gray-800">
+                      <span className="text-gray-300">Subject</span>
+                      <span className="text-gray-300">
+                        CN: {cert.subject?.common_name || "N/A"}
+                      </span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center p-2 border border-gray-700 rounded bg-gray-800">
+                      <span className="text-gray-300">Issuer</span>
+                      <span className="text-gray-300">
+                        CN: {cert.issuer?.common_name || "N/A"}
+                        <br />
+                        O: {cert.issuer?.organization || "N/A"}
+                      </span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center p-2 border border-gray-700 rounded bg-gray-800">
+                      <span className="text-gray-300">Validity</span>
+                      <span className="text-gray-300">
+                        From: {cert.not_before ? new Date(cert.not_before).toLocaleDateString() : "N/A"}
+                        <br />
+                        To: {cert.not_after ? new Date(cert.not_after).toLocaleDateString() : "N/A"}
+                      </span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center p-2 border border-gray-700 rounded bg-gray-800">
+                      <span className="text-gray-300">Serial Number</span>
+                      <div className="flex items-center">
+                        <span className="text-gray-300 text-sm font-mono">{cert.serial_number || "N/A"}</span>
+                        {cert.serial_number && (
+                          <CopyOutlined 
+                            style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
+                            onClick={() => handleCopy(cert.serial_number)}
+                          />
+                        )}
                       </div>
-                      
-                      <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
-                        <span className="text-gray-300">Issuer</span>
-                        <span className="text-gray-300">
-                          CN: {cert.issuer?.common_name || "N/A"}
-                          <br />
-                          O: {cert.issuer?.organization || "N/A"}
-                        </span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center p-2 border border-gray-700 rounded bg-gray-800">
+                      <span className="text-gray-300">Fingerprint</span>
+                      <div className="flex items-center">
+                        <span className="text-gray-300 text-sm font-mono">{cert.fingerprint || "N/A"}</span>
+                        {cert.fingerprint && (
+                          <CopyOutlined 
+                            style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
+                            onClick={() => handleCopy(cert.fingerprint)}
+                          />
+                        )}
                       </div>
-                      
-                      <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
-                        <span className="text-gray-300">Validity</span>
-                        <span className="text-gray-300">
-                          From: {cert.not_before ? new Date(cert.not_before).toLocaleDateString() : "N/A"}
-                          <br />
-                          To: {cert.not_after ? new Date(cert.not_after).toLocaleDateString() : "N/A"}
-                        </span>
-                      </div>
-                      
-                      <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
-                        <span className="text-gray-300">Serial Number</span>
-                        <div className="flex items-center">
-                          <span className="text-gray-300 text-sm font-mono">{cert.serial_number || "N/A"}</span>
-                          {cert.serial_number && (
-                            <CopyOutlined 
-                              style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
-                              onClick={() => handleCopy(cert.serial_number)}
-                            />
-                          )}
+                    </div>
+                    
+                    {cert.quote && (
+                      <>
+                        <div className="mb-2">
+                          <Button
+                            type="primary"
+                            style={{ backgroundColor: "#1e40af" }}
+                            onClick={() => window.open(`https://ra-quote-explorer.vercel.app/r?hex=${cert.quote}`, '_blank')}
+                          >
+                            Check Attestation
+                          </Button>
                         </div>
-                      </div>
-                      
-                      <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
-                        <span className="text-gray-300">Fingerprint</span>
-                        <div className="flex items-center">
-                          <span className="text-gray-300 text-sm font-mono">{cert.fingerprint || "N/A"}</span>
-                          {cert.fingerprint && (
-                            <CopyOutlined 
-                              style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
-                              onClick={() => handleCopy(cert.fingerprint)}
-                            />
-                          )}
-                        </div>
-                      </div>
-                      
-                      {cert.quote && (
-                        <div className="p-2 border border-gray-700 rounded">
+                        <div className="p-2 border border-gray-700 rounded bg-gray-800">
                           <div className="flex justify-between items-center">
                             <span className="text-gray-300">Quote</span>
                             <CopyOutlined 
@@ -1080,86 +1072,81 @@ export function AgentDetail() {
                               onClick={() => handleCopy(cert.quote || "")}
                             />
                           </div>
-                          <div className="bg-gray-800 p-2 mt-2 rounded overflow-auto max-h-32">
+                          <div className="bg-gray-900 p-2 mt-2 rounded overflow-auto max-h-32">
                             <span className="text-gray-300 text-xs font-mono break-all">{cert.quote}</span>
                           </div>
                         </div>
-                      )}
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* KMS证书 */}
+            {attestation.app_certificates.filter(cert => cert.position_in_chain === 1).length > 0 && (
+              <div>
+                <Typography.Title level={5} style={{ color: "white", marginBottom: "16px" }}>
+                  KMS Cert
+                </Typography.Title>
+                {attestation.app_certificates.filter(cert => cert.position_in_chain === 1).map((cert, index: number) => (
+                  <div key={index} className="space-y-4 mt-4">
+                    <div className="flex justify-between items-center p-2 border border-gray-700 rounded bg-gray-800">
+                      <span className="text-gray-300">Subject</span>
+                      <span className="text-gray-300">
+                        CN: {cert.subject?.common_name || "N/A"}
+                        <br />
+                        O: {cert.subject?.organization || "N/A"}
+                      </span>
                     </div>
-                  ))}
-                </Panel>
-              )}
-              
-              {/* KMS证书 */}
-              {attestation.app_certificates.filter(cert => cert.position_in_chain === 1).length > 0 && (
-                <Panel 
-                  header={
-                    <Typography.Text style={{ color: "white" }}>
-                      KMS Cert
-                    </Typography.Text>
-                  }
-                  key="kmsCert" 
-                  style={{ backgroundColor: "#111827", borderColor: "#374151" }}
-                >
-                  {attestation.app_certificates.filter(cert => cert.position_in_chain === 1).map((cert, index: number) => (
-                    <div key={index} className="space-y-4 mt-4">
-                      <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
-                        <span className="text-gray-300">Subject</span>
-                        <span className="text-gray-300">
-                          CN: {cert.subject?.common_name || "N/A"}
-                          <br />
-                          O: {cert.subject?.organization || "N/A"}
-                        </span>
-                      </div>
-                      
-                      <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
-                        <span className="text-gray-300">Issuer</span>
-                        <span className="text-gray-300">
-                          CN: {cert.issuer?.common_name || "N/A"}
-                          <br />
-                          O: {cert.issuer?.organization || "N/A"}
-                        </span>
-                      </div>
-                      
-                      <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
-                        <span className="text-gray-300">Validity</span>
-                        <span className="text-gray-300">
-                          From: {cert.not_before ? new Date(cert.not_before).toLocaleDateString() : "N/A"}
-                          <br />
-                          To: {cert.not_after ? new Date(cert.not_after).toLocaleDateString() : "N/A"}
-                        </span>
-                      </div>
-                      
-                      <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
-                        <span className="text-gray-300">Serial Number</span>
-                        <div className="flex items-center">
-                          <span className="text-gray-300 text-sm font-mono">{cert.serial_number || "N/A"}</span>
-                          {cert.serial_number && (
-                            <CopyOutlined 
-                              style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
-                              onClick={() => handleCopy(cert.serial_number)}
-                            />
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
-                        <span className="text-gray-300">Fingerprint</span>
-                        <div className="flex items-center">
-                          <span className="text-gray-300 text-sm font-mono">{cert.fingerprint || "N/A"}</span>
-                          {cert.fingerprint && (
-                            <CopyOutlined 
-                              style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
-                              onClick={() => handleCopy(cert.fingerprint)}
-                            />
-                          )}
-                        </div>
+                    
+                    <div className="flex justify-between items-center p-2 border border-gray-700 rounded bg-gray-800">
+                      <span className="text-gray-300">Issuer</span>
+                      <span className="text-gray-300">
+                        CN: {cert.issuer?.common_name || "N/A"}
+                        <br />
+                        O: {cert.issuer?.organization || "N/A"}
+                      </span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center p-2 border border-gray-700 rounded bg-gray-800">
+                      <span className="text-gray-300">Validity</span>
+                      <span className="text-gray-300">
+                        From: {cert.not_before ? new Date(cert.not_before).toLocaleDateString() : "N/A"}
+                        <br />
+                        To: {cert.not_after ? new Date(cert.not_after).toLocaleDateString() : "N/A"}
+                      </span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center p-2 border border-gray-700 rounded bg-gray-800">
+                      <span className="text-gray-300">Serial Number</span>
+                      <div className="flex items-center">
+                        <span className="text-gray-300 text-sm font-mono">{cert.serial_number || "N/A"}</span>
+                        {cert.serial_number && (
+                          <CopyOutlined 
+                            style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
+                            onClick={() => handleCopy(cert.serial_number)}
+                          />
+                        )}
                       </div>
                     </div>
-                  ))}
-                </Panel>
-              )}
-            </Collapse>
+                    
+                    <div className="flex justify-between items-center p-2 border border-gray-700 rounded bg-gray-800">
+                      <span className="text-gray-300">Fingerprint</span>
+                      <div className="flex items-center">
+                        <span className="text-gray-300 text-sm font-mono">{cert.fingerprint || "N/A"}</span>
+                        {cert.fingerprint && (
+                          <CopyOutlined 
+                            style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
+                            onClick={() => handleCopy(cert.fingerprint)}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </Card>
         )}
       </div>
@@ -1285,10 +1272,12 @@ export function AgentDetail() {
                 activeKey={activeTabKey}
                 onChange={setActiveTabKey}
                 style={{ marginTop: "20px" }}
+                className="custom-dark-tabs"
+                tabBarStyle={{ color: "white", fontWeight: "bold" }}
                 items={[
                   {
                     key: "info",
-                    label: "基本信息",
+                    label: <span style={{ color: "white", fontWeight: "bold" }}>基本信息</span>,
                     children: (
                       <>
                         {/* 详细信息区域 - 独立占据整行 */}
@@ -1383,7 +1372,7 @@ export function AgentDetail() {
                   },
                   {
                     key: "attestation",
-                    label: "CVM证明",
+                    label: <span style={{ color: "white", fontWeight: "bold" }}>CVM证明</span>,
                     children: renderAttestationTab(),
                   }
                 ]}
