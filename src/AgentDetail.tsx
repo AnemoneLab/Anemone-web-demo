@@ -832,6 +832,20 @@ export function AgentDetail() {
       );
     }
     
+    // 验证数据完整性
+    if (!attestation.tcb_info) {
+      return (
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={
+            <span style={{ color: "#9ca3af" }}>
+              CVM证明信息不完整，缺少TCB信息
+            </span>
+          }
+        />
+      );
+    }
+    
     return (
       <div className="space-y-6">
         {/* TCB信息部分 */}
@@ -849,275 +863,305 @@ export function AgentDetail() {
             <div className="flex items-center justify-between p-3 border border-gray-700 rounded">
               <span className="text-gray-300">MRTD</span>
               <div className="flex items-center">
-                <span className="text-gray-300 text-sm font-mono">{attestation.tcb_info.mrtd}</span>
-                <CopyOutlined 
-                  style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }} 
-                  onClick={() => handleCopy(attestation.tcb_info.mrtd)}
-                />
+                <span className="text-gray-300 text-sm font-mono">{attestation.tcb_info.mrtd || "N/A"}</span>
+                {attestation.tcb_info.mrtd && (
+                  <CopyOutlined 
+                    style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }} 
+                    onClick={() => handleCopy(attestation.tcb_info.mrtd)}
+                  />
+                )}
               </div>
             </div>
             
             <div className="flex items-center justify-between p-3 border border-gray-700 rounded">
               <span className="text-gray-300">RootFS Hash</span>
               <div className="flex items-center">
-                <span className="text-gray-300 text-sm font-mono">{attestation.tcb_info.rootfs_hash}</span>
-                <CopyOutlined 
-                  style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
-                  onClick={() => handleCopy(attestation.tcb_info.rootfs_hash)}
-                />
+                <span className="text-gray-300 text-sm font-mono">{attestation.tcb_info.rootfs_hash || "N/A"}</span>
+                {attestation.tcb_info.rootfs_hash && (
+                  <CopyOutlined 
+                    style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
+                    onClick={() => handleCopy(attestation.tcb_info.rootfs_hash)}
+                  />
+                )}
               </div>
             </div>
             
             <div className="flex items-center justify-between p-3 border border-gray-700 rounded">
               <span className="text-gray-300">RTMR0</span>
               <div className="flex items-center">
-                <span className="text-gray-300 text-sm font-mono">{attestation.tcb_info.rtmr0}</span>
-                <CopyOutlined 
-                  style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
-                  onClick={() => handleCopy(attestation.tcb_info.rtmr0)}
-                />
+                <span className="text-gray-300 text-sm font-mono">{attestation.tcb_info.rtmr0 || "N/A"}</span>
+                {attestation.tcb_info.rtmr0 && (
+                  <CopyOutlined 
+                    style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
+                    onClick={() => handleCopy(attestation.tcb_info.rtmr0)}
+                  />
+                )}
               </div>
             </div>
             
             <div className="flex items-center justify-between p-3 border border-gray-700 rounded">
               <span className="text-gray-300">RTMR1</span>
               <div className="flex items-center">
-                <span className="text-gray-300 text-sm font-mono">{attestation.tcb_info.rtmr1}</span>
-                <CopyOutlined 
-                  style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
-                  onClick={() => handleCopy(attestation.tcb_info.rtmr1)}
-                />
+                <span className="text-gray-300 text-sm font-mono">{attestation.tcb_info.rtmr1 || "N/A"}</span>
+                {attestation.tcb_info.rtmr1 && (
+                  <CopyOutlined 
+                    style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
+                    onClick={() => handleCopy(attestation.tcb_info.rtmr1)}
+                  />
+                )}
               </div>
             </div>
             
             <div className="flex items-center justify-between p-3 border border-gray-700 rounded">
               <span className="text-gray-300">RTMR2</span>
               <div className="flex items-center">
-                <span className="text-gray-300 text-sm font-mono">{attestation.tcb_info.rtmr2}</span>
-                <CopyOutlined 
-                  style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
-                  onClick={() => handleCopy(attestation.tcb_info.rtmr2)}
-                />
+                <span className="text-gray-300 text-sm font-mono">{attestation.tcb_info.rtmr2 || "N/A"}</span>
+                {attestation.tcb_info.rtmr2 && (
+                  <CopyOutlined 
+                    style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
+                    onClick={() => handleCopy(attestation.tcb_info.rtmr2)}
+                  />
+                )}
               </div>
             </div>
             
             <div className="flex items-center justify-between p-3 border border-gray-700 rounded">
               <span className="text-gray-300">RTMR3</span>
               <div className="flex items-center">
-                <span className="text-gray-300 text-sm font-mono">{attestation.tcb_info.rtmr3}</span>
-                <CopyOutlined 
-                  style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
-                  onClick={() => handleCopy(attestation.tcb_info.rtmr3)}
-                />
+                <span className="text-gray-300 text-sm font-mono">{attestation.tcb_info.rtmr3 || "N/A"}</span>
+                {attestation.tcb_info.rtmr3 && (
+                  <CopyOutlined 
+                    style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
+                    onClick={() => handleCopy(attestation.tcb_info.rtmr3)}
+                  />
+                )}
               </div>
             </div>
             
-            <Collapse
-              style={{ backgroundColor: "#1f2937", borderColor: "#374151" }}
-              expandIconPosition="end"
-            >
-              <Panel 
-                header={
-                  <Typography.Text style={{ color: "white" }}>
-                    Event Log
-                  </Typography.Text>
-                }
-                key="eventLog" 
-                style={{ backgroundColor: "#111827", borderColor: "#374151" }}
+            {attestation.tcb_info.event_log && attestation.tcb_info.event_log.length > 0 && (
+              <Collapse
+                style={{ backgroundColor: "#1f2937", borderColor: "#374151" }}
+                expandIconPosition="end"
               >
-                {attestation.tcb_info.event_log.filter(event => event.event).map((event, index: number) => (
-                  <div key={index} className="flex justify-between items-center mb-2 p-2 border border-gray-700 rounded">
-                    <span className="text-gray-300">{event.event}</span>
-                    <div className="flex items-center">
-                      <span className="text-gray-300 text-sm font-mono truncate max-w-md">{event.event_payload}</span>
-                      <CopyOutlined 
-                        style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
-                        onClick={() => handleCopy(event.event_payload)}
-                      />
+                <Panel 
+                  header={
+                    <Typography.Text style={{ color: "white" }}>
+                      Event Log
+                    </Typography.Text>
+                  }
+                  key="eventLog" 
+                  style={{ backgroundColor: "#111827", borderColor: "#374151" }}
+                >
+                  {attestation.tcb_info.event_log.filter(event => event.event).map((event, index: number) => (
+                    <div key={index} className="flex justify-between items-center mb-2 p-2 border border-gray-700 rounded">
+                      <span className="text-gray-300">{event.event}</span>
+                      <div className="flex items-center">
+                        <span className="text-gray-300 text-sm font-mono truncate max-w-md">{event.event_payload}</span>
+                        <CopyOutlined 
+                          style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
+                          onClick={() => handleCopy(event.event_payload)}
+                        />
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </Panel>
-            </Collapse>
+                  ))}
+                </Panel>
+              </Collapse>
+            )}
           </div>
         </Card>
         
         {/* App Compose部分 */}
-        <Card
-          style={{ backgroundColor: "#1f2937", borderColor: "#374151" }}
-          headStyle={{ backgroundColor: "#111827", borderBottom: "1px solid #374151" }}
-          title={
-            <Typography.Title level={4} style={{ color: "white", margin: 0 }}>
-              <CodeOutlined style={{ marginRight: "8px" }} />
-              App Compose
-            </Typography.Title>
-          }
-        >
-          <div className="bg-gray-800 p-4 rounded-lg overflow-auto max-h-96">
-            <pre className="text-white">
-              {attestation.compose_file}
-            </pre>
-          </div>
-        </Card>
+        {attestation.compose_file && (
+          <Card
+            style={{ backgroundColor: "#1f2937", borderColor: "#374151" }}
+            headStyle={{ backgroundColor: "#111827", borderBottom: "1px solid #374151" }}
+            title={
+              <Typography.Title level={4} style={{ color: "white", margin: 0 }}>
+                <CodeOutlined style={{ marginRight: "8px" }} />
+                App Compose
+              </Typography.Title>
+            }
+          >
+            <div className="bg-gray-800 p-4 rounded-lg overflow-auto max-h-96">
+              <pre className="text-white">
+                {attestation.compose_file}
+              </pre>
+            </div>
+          </Card>
+        )}
         
         {/* 证书链部分 */}
-        <Card 
-          style={{ backgroundColor: "#1f2937", borderColor: "#374151" }}
-          headStyle={{ backgroundColor: "#111827", borderBottom: "1px solid #374151" }}
-          title={
-            <Typography.Title level={4} style={{ color: "white", margin: 0 }}>
-              <FileTextOutlined style={{ marginRight: "8px" }} />
-              证书链
-            </Typography.Title>
-          }
-        >
-          <Collapse
+        {attestation.app_certificates && attestation.app_certificates.length > 0 && (
+          <Card 
             style={{ backgroundColor: "#1f2937", borderColor: "#374151" }}
-            expandIconPosition="end"
-            defaultActiveKey={['appCert']}
+            headStyle={{ backgroundColor: "#111827", borderBottom: "1px solid #374151" }}
+            title={
+              <Typography.Title level={4} style={{ color: "white", margin: 0 }}>
+                <FileTextOutlined style={{ marginRight: "8px" }} />
+                证书链
+              </Typography.Title>
+            }
           >
-            {/* 应用证书 */}
-            <Panel 
-              header={
-                <Typography.Text style={{ color: "white" }}>
-                  App Cert
-                </Typography.Text>
-              }
-              key="appCert" 
-              style={{ backgroundColor: "#111827", borderColor: "#374151" }}
+            <Collapse
+              style={{ backgroundColor: "#1f2937", borderColor: "#374151" }}
+              expandIconPosition="end"
+              defaultActiveKey={['appCert']}
             >
-              {attestation.app_certificates.filter(cert => cert.position_in_chain === 0).map((cert, index: number) => (
-                <div key={index} className="space-y-4 mt-4">
-                  <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
-                    <span className="text-gray-300">Subject</span>
-                    <span className="text-gray-300">
-                      CN: {cert.subject.common_name || "N/A"}
-                    </span>
-                  </div>
-                  
-                  <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
-                    <span className="text-gray-300">Issuer</span>
-                    <span className="text-gray-300">
-                      CN: {cert.issuer.common_name || "N/A"}
-                      <br />
-                      O: {cert.issuer.organization || "N/A"}
-                    </span>
-                  </div>
-                  
-                  <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
-                    <span className="text-gray-300">Validity</span>
-                    <span className="text-gray-300">
-                      From: {new Date(cert.not_before).toLocaleDateString()}
-                      <br />
-                      To: {new Date(cert.not_after).toLocaleDateString()}
-                    </span>
-                  </div>
-                  
-                  <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
-                    <span className="text-gray-300">Serial Number</span>
-                    <div className="flex items-center">
-                      <span className="text-gray-300 text-sm font-mono">{cert.serial_number}</span>
-                      <CopyOutlined 
-                        style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
-                        onClick={() => handleCopy(cert.serial_number)}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
-                    <span className="text-gray-300">Fingerprint</span>
-                    <div className="flex items-center">
-                      <span className="text-gray-300 text-sm font-mono">{cert.fingerprint}</span>
-                      <CopyOutlined 
-                        style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
-                        onClick={() => handleCopy(cert.fingerprint)}
-                      />
-                    </div>
-                  </div>
-                  
-                  {cert.quote && (
-                    <div className="p-2 border border-gray-700 rounded">
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-300">Quote</span>
-                        <CopyOutlined 
-                          style={{ cursor: "pointer", color: "#9ca3af" }}
-                          onClick={() => handleCopy(cert.quote || "")}
-                        />
+              {/* 应用证书 */}
+              {attestation.app_certificates.filter(cert => cert.position_in_chain === 0).length > 0 && (
+                <Panel 
+                  header={
+                    <Typography.Text style={{ color: "white" }}>
+                      App Cert
+                    </Typography.Text>
+                  }
+                  key="appCert" 
+                  style={{ backgroundColor: "#111827", borderColor: "#374151" }}
+                >
+                  {attestation.app_certificates.filter(cert => cert.position_in_chain === 0).map((cert, index: number) => (
+                    <div key={index} className="space-y-4 mt-4">
+                      <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
+                        <span className="text-gray-300">Subject</span>
+                        <span className="text-gray-300">
+                          CN: {cert.subject?.common_name || "N/A"}
+                        </span>
                       </div>
-                      <div className="bg-gray-800 p-2 mt-2 rounded overflow-auto max-h-32">
-                        <span className="text-gray-300 text-xs font-mono break-all">{cert.quote}</span>
+                      
+                      <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
+                        <span className="text-gray-300">Issuer</span>
+                        <span className="text-gray-300">
+                          CN: {cert.issuer?.common_name || "N/A"}
+                          <br />
+                          O: {cert.issuer?.organization || "N/A"}
+                        </span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
+                        <span className="text-gray-300">Validity</span>
+                        <span className="text-gray-300">
+                          From: {cert.not_before ? new Date(cert.not_before).toLocaleDateString() : "N/A"}
+                          <br />
+                          To: {cert.not_after ? new Date(cert.not_after).toLocaleDateString() : "N/A"}
+                        </span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
+                        <span className="text-gray-300">Serial Number</span>
+                        <div className="flex items-center">
+                          <span className="text-gray-300 text-sm font-mono">{cert.serial_number || "N/A"}</span>
+                          {cert.serial_number && (
+                            <CopyOutlined 
+                              style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
+                              onClick={() => handleCopy(cert.serial_number)}
+                            />
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
+                        <span className="text-gray-300">Fingerprint</span>
+                        <div className="flex items-center">
+                          <span className="text-gray-300 text-sm font-mono">{cert.fingerprint || "N/A"}</span>
+                          {cert.fingerprint && (
+                            <CopyOutlined 
+                              style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
+                              onClick={() => handleCopy(cert.fingerprint)}
+                            />
+                          )}
+                        </div>
+                      </div>
+                      
+                      {cert.quote && (
+                        <div className="p-2 border border-gray-700 rounded">
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-300">Quote</span>
+                            <CopyOutlined 
+                              style={{ cursor: "pointer", color: "#9ca3af" }}
+                              onClick={() => handleCopy(cert.quote || "")}
+                            />
+                          </div>
+                          <div className="bg-gray-800 p-2 mt-2 rounded overflow-auto max-h-32">
+                            <span className="text-gray-300 text-xs font-mono break-all">{cert.quote}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </Panel>
+              )}
+              
+              {/* KMS证书 */}
+              {attestation.app_certificates.filter(cert => cert.position_in_chain === 1).length > 0 && (
+                <Panel 
+                  header={
+                    <Typography.Text style={{ color: "white" }}>
+                      KMS Cert
+                    </Typography.Text>
+                  }
+                  key="kmsCert" 
+                  style={{ backgroundColor: "#111827", borderColor: "#374151" }}
+                >
+                  {attestation.app_certificates.filter(cert => cert.position_in_chain === 1).map((cert, index: number) => (
+                    <div key={index} className="space-y-4 mt-4">
+                      <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
+                        <span className="text-gray-300">Subject</span>
+                        <span className="text-gray-300">
+                          CN: {cert.subject?.common_name || "N/A"}
+                          <br />
+                          O: {cert.subject?.organization || "N/A"}
+                        </span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
+                        <span className="text-gray-300">Issuer</span>
+                        <span className="text-gray-300">
+                          CN: {cert.issuer?.common_name || "N/A"}
+                          <br />
+                          O: {cert.issuer?.organization || "N/A"}
+                        </span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
+                        <span className="text-gray-300">Validity</span>
+                        <span className="text-gray-300">
+                          From: {cert.not_before ? new Date(cert.not_before).toLocaleDateString() : "N/A"}
+                          <br />
+                          To: {cert.not_after ? new Date(cert.not_after).toLocaleDateString() : "N/A"}
+                        </span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
+                        <span className="text-gray-300">Serial Number</span>
+                        <div className="flex items-center">
+                          <span className="text-gray-300 text-sm font-mono">{cert.serial_number || "N/A"}</span>
+                          {cert.serial_number && (
+                            <CopyOutlined 
+                              style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
+                              onClick={() => handleCopy(cert.serial_number)}
+                            />
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
+                        <span className="text-gray-300">Fingerprint</span>
+                        <div className="flex items-center">
+                          <span className="text-gray-300 text-sm font-mono">{cert.fingerprint || "N/A"}</span>
+                          {cert.fingerprint && (
+                            <CopyOutlined 
+                              style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
+                              onClick={() => handleCopy(cert.fingerprint)}
+                            />
+                          )}
+                        </div>
                       </div>
                     </div>
-                  )}
-                </div>
-              ))}
-            </Panel>
-            
-            {/* KMS证书 */}
-            <Panel 
-              header={
-                <Typography.Text style={{ color: "white" }}>
-                  KMS Cert
-                </Typography.Text>
-              }
-              key="kmsCert" 
-              style={{ backgroundColor: "#111827", borderColor: "#374151" }}
-            >
-              {attestation.app_certificates.filter(cert => cert.position_in_chain === 1).map((cert, index: number) => (
-                <div key={index} className="space-y-4 mt-4">
-                  <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
-                    <span className="text-gray-300">Subject</span>
-                    <span className="text-gray-300">
-                      CN: {cert.subject.common_name || "N/A"}
-                      <br />
-                      O: {cert.subject.organization || "N/A"}
-                    </span>
-                  </div>
-                  
-                  <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
-                    <span className="text-gray-300">Issuer</span>
-                    <span className="text-gray-300">
-                      CN: {cert.issuer.common_name || "N/A"}
-                      <br />
-                      O: {cert.issuer.organization || "N/A"}
-                    </span>
-                  </div>
-                  
-                  <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
-                    <span className="text-gray-300">Validity</span>
-                    <span className="text-gray-300">
-                      From: {new Date(cert.not_before).toLocaleDateString()}
-                      <br />
-                      To: {new Date(cert.not_after).toLocaleDateString()}
-                    </span>
-                  </div>
-                  
-                  <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
-                    <span className="text-gray-300">Serial Number</span>
-                    <div className="flex items-center">
-                      <span className="text-gray-300 text-sm font-mono">{cert.serial_number}</span>
-                      <CopyOutlined 
-                        style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
-                        onClick={() => handleCopy(cert.serial_number)}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="flex justify-between items-center p-2 border border-gray-700 rounded">
-                    <span className="text-gray-300">Fingerprint</span>
-                    <div className="flex items-center">
-                      <span className="text-gray-300 text-sm font-mono">{cert.fingerprint}</span>
-                      <CopyOutlined 
-                        style={{ cursor: "pointer", marginLeft: "8px", color: "#9ca3af" }}
-                        onClick={() => handleCopy(cert.fingerprint)}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </Panel>
-          </Collapse>
-        </Card>
+                  ))}
+                </Panel>
+              )}
+            </Collapse>
+          </Card>
+        )}
       </div>
     );
   };
