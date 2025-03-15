@@ -239,6 +239,70 @@ export function AgentDetail() {
     }
   };
 
+  // 新增：启动CVM
+  const handleStartCvm = async () => {
+    if (!agent?.roleData?.app_id) {
+      message.error('无法启动CVM：缺少App ID');
+      return;
+    }
+    
+    const appId = agent.roleData.app_id;
+    
+    message.loading('正在启动CVM...', 0);
+    try {
+      const result = await apiClient.startCvm(appId);
+      
+      if (result.success) {
+        message.destroy();
+        message.success('CVM启动命令已发送，请稍后刷新查看状态');
+        
+        // 等待一段时间后刷新状态
+        setTimeout(() => {
+          fetchCvmStats(appId);
+          fetchCvmAttestation(appId);
+        }, 3000);
+      } else {
+        throw new Error(result.message || '启动CVM失败');
+      }
+    } catch (error) {
+      message.destroy();
+      console.error('启动CVM失败:', error);
+      message.error('启动CVM失败，请稍后重试');
+    }
+  };
+
+  // 新增：停止CVM
+  const handleStopCvm = async () => {
+    if (!agent?.roleData?.app_id) {
+      message.error('无法停止CVM：缺少App ID');
+      return;
+    }
+    
+    const appId = agent.roleData.app_id;
+    
+    message.loading('正在停止CVM...', 0);
+    try {
+      const result = await apiClient.stopCvm(appId);
+      
+      if (result.success) {
+        message.destroy();
+        message.success('CVM停止命令已发送，请稍后刷新查看状态');
+        
+        // 等待一段时间后刷新状态
+        setTimeout(() => {
+          fetchCvmStats(appId);
+          fetchCvmAttestation(appId);
+        }, 3000);
+      } else {
+        throw new Error(result.message || '停止CVM失败');
+      }
+    } catch (error) {
+      message.destroy();
+      console.error('停止CVM失败:', error);
+      message.error('停止CVM失败，请稍后重试');
+    }
+  };
+
   // 当标签页切换到CVM Overview标签页时，自动获取系统状态信息
   useEffect(() => {
     if (activeTabKey === "cvm-overview" && agent?.roleData?.app_id && !cvmStats) {
@@ -1263,6 +1327,26 @@ export function AgentDetail() {
     
     return (
       <div className="space-y-6">
+        {/* 控制按钮区域 */}
+        <div className="flex justify-end mb-4">
+          {cvmStats.is_online ? (
+            <Button 
+              type="primary" 
+              danger
+              onClick={handleStopCvm}
+            >
+              关闭CVM
+            </Button>
+          ) : (
+            <Button 
+              type="primary"
+              onClick={handleStartCvm}
+            >
+              启动CVM
+            </Button>
+          )}
+        </div>
+        
         <Row gutter={16}>
           {/* 系统信息 */}
           <Col span={8}>
@@ -1752,7 +1836,7 @@ export function AgentDetail() {
                               <div className="flex justify-between items-center w-full p-2">
                                 <Button 
                                   type="text"
-                                  icon={<ArrowLeft />}
+                                  icon={<ArrowLeftOutlined />}
                                   onClick={() => handleAddSkill(skill.object_id)}
                                 />
                                 <div className="text-right">
