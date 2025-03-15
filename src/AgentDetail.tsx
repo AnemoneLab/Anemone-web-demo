@@ -3,7 +3,7 @@ import { useSuiClient, useCurrentAccount, useSignAndExecuteTransaction } from '@
 import { useParams, useNavigate } from 'react-router-dom';
 import { type SuiObjectResponse } from '@mysten/sui/client';
 import { Typography, Skeleton, Button, Descriptions, Card, Tag, Divider, message, Tooltip, Progress, List, Empty, Row, Col, Space, Tabs, Collapse } from 'antd';
-import { ArrowLeftOutlined, CopyOutlined, WalletOutlined, HeartOutlined, LockOutlined, ClockCircleOutlined, PlusOutlined, ToolOutlined, SaveOutlined, ArrowRightOutlined, ArrowLeftOutlined as ArrowLeft, SafetyCertificateOutlined, CodeOutlined, FileTextOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, CopyOutlined, WalletOutlined, HeartOutlined, LockOutlined, ClockCircleOutlined, PlusOutlined, ToolOutlined, SaveOutlined, ArrowRightOutlined, ArrowLeftOutlined as ArrowLeft, SafetyCertificateOutlined, CodeOutlined, FileTextOutlined, DashboardOutlined } from '@ant-design/icons';
 import './styles.css';
 import { apiClient } from './api/apiClient';
 import { RoleManager } from '@anemonelab/sui-sdk';
@@ -124,6 +124,41 @@ interface NftData {
   owner?: string;
 }
 
+// 定义CVM系统状态类型
+interface DiskInfo {
+  name: string;
+  mount_point: string;
+  total_size: number;
+  free_size: number;
+}
+
+interface SysInfo {
+  os_name: string;
+  os_version: string;
+  kernel_version: string;
+  cpu_model: string;
+  num_cpus: number;
+  total_memory: number;
+  available_memory: number;
+  used_memory: number;
+  free_memory: number;
+  total_swap: number;
+  used_swap: number;
+  free_swap: number;
+  uptime: number;
+  loadavg_one: number;
+  loadavg_five: number;
+  loadavg_fifteen: number;
+  disks: DiskInfo[];
+}
+
+interface CvmStatsResponse {
+  is_online: boolean;
+  is_public: boolean;
+  error: string | null;
+  sysinfo: SysInfo;
+}
+
 export function AgentDetail() {
   const { roleId } = useParams<{ roleId: string }>();
   const [agent, setAgent] = useState<AgentDetail | null>(null);
@@ -138,6 +173,8 @@ export function AgentDetail() {
   const [activeTabKey, setActiveTabKey] = useState<string>("info");
   const [attestation, setAttestation] = useState<AttestationResponse | null>(null);
   const [attestationLoading, setAttestationLoading] = useState(false);
+  const [cvmStats, setCvmStats] = useState<CvmStatsResponse | null>(null);
+  const [cvmStatsLoading, setCvmStatsLoading] = useState(false);
   const navigate = useNavigate();
   const suiClient = useSuiClient();
   const currentAccount = useCurrentAccount();
@@ -175,6 +212,39 @@ export function AgentDetail() {
       setAttestationLoading(false);
     }
   };
+
+  // 新增：获取CVM状态信息
+  const fetchCvmStats = async (appId: string) => {
+    if (!appId) {
+      message.error('无法获取系统状态信息：缺少App ID');
+      return;
+    }
+    
+    setCvmStatsLoading(true);
+    try {
+      // 使用apiClient获取CVM状态信息
+      const statsData = await apiClient.getCvmStats(appId);
+      console.log('获取到CVM状态信息:', statsData);
+      
+      if (statsData.success && statsData.data) {
+        setCvmStats(statsData.data);
+      } else {
+        throw new Error(statsData.message || '获取系统状态信息失败');
+      }
+    } catch (error) {
+      console.error('获取CVM系统状态信息失败:', error);
+      message.error('获取CVM系统状态信息失败');
+    } finally {
+      setCvmStatsLoading(false);
+    }
+  };
+
+  // 当标签页切换到CVM Overview标签页时，自动获取系统状态信息
+  useEffect(() => {
+    if (activeTabKey === "cvm-overview" && agent?.roleData?.app_id && !cvmStats) {
+      fetchCvmStats(agent.roleData.app_id);
+    }
+  }, [activeTabKey, agent?.roleData?.app_id, cvmStats]);
 
   // 当标签页切换到证明信息标签页时，自动获取证明信息
   useEffect(() => {
@@ -1145,6 +1215,149 @@ export function AgentDetail() {
     );
   };
 
+  // 渲染CVM Overview标签页内容
+  const renderCvmOverviewTab = () => {
+    if (cvmStatsLoading) {
+      return <Skeleton active paragraph={{ rows: 10 }} />;
+    }
+    
+    if (!cvmStats) {
+      return (
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={
+            <span style={{ color: "#9ca3af" }}>
+              无法获取CVM系统状态信息，可能原因：
+              <ul style={{ textAlign: "left", marginTop: "10px" }}>
+                <li>CVM未部署或离线</li>
+                <li>没有App ID信息</li>
+                <li>网络连接问题</li>
+              </ul>
+            </span>
+          }
+        />
+      );
+    }
+    
+    // 计算内存使用百分比
+    const memoryUsagePercent = cvmStats.sysinfo.total_memory > 0 ? 
+      (cvmStats.sysinfo.used_memory / cvmStats.sysinfo.total_memory) * 100 : 0;
+    
+    // 获取主磁盘信息
+    const mainDisk = cvmStats.sysinfo.disks && cvmStats.sysinfo.disks.length > 0 ? 
+      cvmStats.sysinfo.disks[0] : null;
+    
+    // 计算磁盘使用百分比
+    const diskUsagePercent = mainDisk && mainDisk.total_size > 0 ? 
+      ((mainDisk.total_size - mainDisk.free_size) / mainDisk.total_size) * 100 : 0;
+    
+    // 格式化内存值为GB
+    const bytesToGB = (bytes: number) => (bytes / (1024 * 1024 * 1024)).toFixed(2);
+    
+    // 格式化运行时间
+    const formatUptime = (seconds: number) => {
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      return `${hours}h ${minutes}m`;
+    };
+    
+    return (
+      <div className="space-y-6">
+        <Row gutter={16}>
+          {/* 系统信息 */}
+          <Col span={8}>
+            <Card
+              style={{ backgroundColor: "#1f2937", borderColor: "#374151" }}
+              headStyle={{ backgroundColor: "#111827", borderBottom: "1px solid #374151" }}
+              title={
+                <Typography.Title level={4} style={{ color: "white", margin: 0 }}>
+                  System Info
+                </Typography.Title>
+              }
+            >
+              <div className="space-y-4">
+                <div className="flex flex-col">
+                  <span className="text-gray-400">Operating System</span>
+                  <span className="text-white text-lg">{cvmStats.sysinfo.os_name}</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-gray-400">DStack</span>
+                  <span className="text-white text-lg">{cvmStats.sysinfo.os_version}</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-gray-400">CPU</span>
+                  <span className="text-white text-lg">{cvmStats.sysinfo.num_cpus} vCPUs</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-gray-400">Uptime</span>
+                  <span className="text-white text-lg">{formatUptime(cvmStats.sysinfo.uptime)}</span>
+                </div>
+              </div>
+            </Card>
+          </Col>
+          
+          {/* 内存使用 */}
+          <Col span={8}>
+            <Card
+              style={{ backgroundColor: "#1f2937", borderColor: "#374151" }}
+              headStyle={{ backgroundColor: "#111827", borderBottom: "1px solid #374151" }}
+              title={
+                <Typography.Title level={4} style={{ color: "white", margin: 0 }}>
+                  Memory Usage
+                </Typography.Title>
+              }
+            >
+              <div className="space-y-4">
+                <Progress 
+                  percent={memoryUsagePercent} 
+                  showInfo={false}
+                  strokeColor="#10B981"
+                  trailColor="#6B7280"
+                />
+                <div className="text-white text-center">
+                  Used: {bytesToGB(cvmStats.sysinfo.used_memory)} GB / {bytesToGB(cvmStats.sysinfo.total_memory)} GB ({memoryUsagePercent.toFixed(1)}%)
+                </div>
+              </div>
+            </Card>
+          </Col>
+          
+          {/* 存储 */}
+          <Col span={8}>
+            <Card
+              style={{ backgroundColor: "#1f2937", borderColor: "#374151" }}
+              headStyle={{ backgroundColor: "#111827", borderBottom: "1px solid #374151" }}
+              title={
+                <Typography.Title level={4} style={{ color: "white", margin: 0 }}>
+                  Storage
+                </Typography.Title>
+              }
+            >
+              <div className="space-y-4">
+                {mainDisk ? (
+                  <>
+                    <Progress 
+                      percent={diskUsagePercent} 
+                      showInfo={false}
+                      strokeColor="#10B981"
+                      trailColor="#6B7280"
+                    />
+                    <div className="text-white text-center">
+                      Free: {bytesToGB(mainDisk.free_size)} GB / {bytesToGB(mainDisk.total_size)} GB
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-white text-center">
+                    No disk information available
+                  </div>
+                )}
+              </div>
+            </Card>
+          </Col>
+        </Row>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-900 p-6">
       <div className="max-w-7xl mx-auto">
@@ -1168,9 +1381,14 @@ export function AgentDetail() {
               title={
                 <Typography.Title level={2} style={{ color: "white", margin: 0 }}>
                   {agent.name || agent.nftData?.name || "未命名Agent"}
-                  {agent.roleData?.is_active ? 
-                    <Tag color="success" style={{ marginLeft: 12 }}>已激活</Tag> : 
-                    <Tag color="error" style={{ marginLeft: 12 }}>未激活</Tag>
+                  {attestation ? 
+                    (attestation.is_online ? 
+                      <Tag color="success" style={{ marginLeft: 12 }}>在线</Tag> : 
+                      <Tag color="error" style={{ marginLeft: 12 }}>离线</Tag>)
+                    : 
+                    (agent.roleData?.is_active ? 
+                      <Tag color="success" style={{ marginLeft: 12 }}>已激活</Tag> : 
+                      <Tag color="error" style={{ marginLeft: 12 }}>未激活</Tag>)
                   }
                   {agent.roleData?.is_locked && 
                     <Tag color="warning" style={{ marginLeft: 12 }}>已锁定</Tag>
@@ -1361,6 +1579,11 @@ export function AgentDetail() {
                         </Descriptions>
                       </>
                     ),
+                  },
+                  {
+                    key: "cvm-overview",
+                    label: <span style={{ color: "white", fontWeight: "bold" }}><DashboardOutlined style={{ marginRight: "8px" }} />CVM Overview</span>,
+                    children: renderCvmOverviewTab(),
                   },
                   {
                     key: "attestation",
