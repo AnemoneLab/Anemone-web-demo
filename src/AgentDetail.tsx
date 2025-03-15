@@ -1303,6 +1303,35 @@ export function AgentDetail() {
       );
     }
     
+    // CVM离线状态处理
+    if (!cvmStats.is_online || !cvmStats.sysinfo) {
+      return (
+        <div className="space-y-6">
+          {/* 控制按钮区域 */}
+          <div className="flex justify-between items-center mb-4">
+            <Card
+              style={{ backgroundColor: "#1f2937", borderColor: "#374151", width: "100%" }}
+              headStyle={{ backgroundColor: "#111827", borderBottom: "1px solid #374151" }}
+            >
+              <div className="text-center py-6">
+                <Typography.Title level={4} style={{ color: "white", margin: "0 0 20px 0" }}>
+                  CVM当前处于离线状态
+                </Typography.Title>
+                <Button 
+                  type="primary"
+                  size="large"
+                  onClick={handleStartCvm}
+                >
+                  启动CVM
+                </Button>
+              </div>
+            </Card>
+          </div>
+        </div>
+      );
+    }
+    
+    // CVM在线状态，显示详细信息
     // 计算内存使用百分比
     const memoryUsagePercent = cvmStats.sysinfo.total_memory > 0 ? 
       (cvmStats.sysinfo.used_memory / cvmStats.sysinfo.total_memory) * 100 : 0;
@@ -1329,22 +1358,13 @@ export function AgentDetail() {
       <div className="space-y-6">
         {/* 控制按钮区域 */}
         <div className="flex justify-end mb-4">
-          {cvmStats.is_online ? (
-            <Button 
-              type="primary" 
-              danger
-              onClick={handleStopCvm}
-            >
-              关闭CVM
-            </Button>
-          ) : (
-            <Button 
-              type="primary"
-              onClick={handleStartCvm}
-            >
-              启动CVM
-            </Button>
-          )}
+          <Button 
+            type="primary" 
+            danger
+            onClick={handleStopCvm}
+          >
+            关闭CVM
+          </Button>
         </div>
         
         <Row gutter={16}>
