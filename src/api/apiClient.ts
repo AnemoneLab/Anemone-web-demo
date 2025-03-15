@@ -70,15 +70,10 @@ const fetcher = async ({
 
 export const apiClient = {
     sendMessage: (roleId: string, message: string) => {
-        const formData = new FormData();
-        const messageWithRole = `${message}\nroleId=${roleId}`;
-        formData.append("text", messageWithRole);
-        formData.append("user", "user");
-
         return fetcher({
-            url: `/a6cd6712-4ad3-0396-8892-7bd297117635/message`,
+            url: `/chat`,
             method: "POST",
-            body: formData,
+            body: { roleId, message },
         });
     },
     
