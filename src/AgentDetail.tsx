@@ -159,6 +159,31 @@ interface CvmStatsResponse {
   sysinfo: SysInfo;
 }
 
+// 定义CVM组合信息类型
+interface CvmCompositionResponse {
+  is_online: boolean;
+  is_public: boolean;
+  error: string | null;
+  docker_compose_file: string;
+  manifest_version: number;
+  version: string;
+  runner: string;
+  features: string[] | null;
+  containers: Array<DockerContainer>;
+}
+
+interface DockerContainer {
+  id: string;
+  names: string[];
+  image: string;
+  image_id: string;
+  command: string;
+  created: number;
+  state: string;
+  status: string;
+  log_endpoint: string;
+}
+
 export function AgentDetail() {
   const { roleId } = useParams<{ roleId: string }>();
   const [agent, setAgent] = useState<AgentDetail | null>(null);
@@ -176,6 +201,9 @@ export function AgentDetail() {
   const [cvmStats, setCvmStats] = useState<CvmStatsResponse | null>(null);
   const [cvmStatsLoading, setCvmStatsLoading] = useState(false);
   const [cvmStatusRefreshing, setCvmStatusRefreshing] = useState(false);
+  const [cvmComposition, setCvmComposition] = useState<CvmCompositionResponse | null>(null);
+  const [cvmCompositionLoading, setCvmCompositionLoading] = useState(false);
+  const [dockerVersion, setDockerVersion] = useState<string | null>(null);
   const navigate = useNavigate();
   const suiClient = useSuiClient();
   const currentAccount = useCurrentAccount();
@@ -244,6 +272,53 @@ export function AgentDetail() {
     }
   };
 
+  // 获取CVM组合信息
+  const fetchCvmComposition = async (appId: string) => {
+    if (!appId) {
+      message.error('无法获取CVM组合信息：缺少App ID');
+      return;
+    }
+    
+    setCvmCompositionLoading(true);
+    try {
+      // 使用apiClient获取CVM组合信息
+      const compositionData = await apiClient.getCvmComposition(appId);
+      console.log('获取到CVM组合信息:', compositionData);
+      
+      if (compositionData.success && compositionData.data) {
+        setCvmComposition(compositionData.data);
+        
+        // 提取Docker版本
+        if (compositionData.data.containers && compositionData.data.containers.length > 0) {
+          // 寻找包含 'anemone-agent-cvm' 的镜像
+          const targetContainer = compositionData.data.containers.find(
+            container => container.image.includes('anemone-agent-cvm')
+          );
+          
+          if (targetContainer) {
+            const versionMatch = targetContainer.image.match(/:v?([\d\.]+)/);
+            if (versionMatch && versionMatch[1]) {
+              setDockerVersion(versionMatch[1]);
+            } else {
+              // 如果没有找到版本号格式，可能使用的是其他格式，直接获取冒号后的部分
+              const parts = targetContainer.image.split(':');
+              if (parts.length > 1) {
+                setDockerVersion(parts[parts.length - 1]);
+              }
+            }
+          }
+        }
+      } else {
+        throw new Error(compositionData.message || '获取CVM组合信息失败');
+      }
+    } catch (error) {
+      console.error('获取CVM组合信息失败:', error);
+      message.error('获取CVM组合信息失败');
+    } finally {
+      setCvmCompositionLoading(false);
+    }
+  };
+
   // 刷新CVM状态
   const refreshCvmStatus = () => {
     if (!agent?.roleData?.app_id) return;
@@ -251,6 +326,7 @@ export function AgentDetail() {
     setCvmStatusRefreshing(true);
     fetchCvmStats(agent.roleData.app_id);
     fetchCvmAttestation(agent.roleData.app_id);
+    fetchCvmComposition(agent.roleData.app_id);
   };
 
   // 启动CVM
@@ -358,6 +434,7 @@ export function AgentDetail() {
         if (roleData.app_id) {
           fetchCvmStats(roleData.app_id);
           fetchCvmAttestation(roleData.app_id);
+          fetchCvmComposition(roleData.app_id);
         }
         
         setLoading(false);
@@ -394,6 +471,7 @@ export function AgentDetail() {
             if (roleData.app_id) {
               fetchCvmStats(roleData.app_id);
               fetchCvmAttestation(roleData.app_id);
+              fetchCvmComposition(roleData.app_id);
             }
           } else {
             // 如果API没有返回数据，创建一个基本的Agent对象
@@ -414,6 +492,7 @@ export function AgentDetail() {
             if (roleData.app_id) {
               fetchCvmStats(roleData.app_id);
               fetchCvmAttestation(roleData.app_id);
+              fetchCvmComposition(roleData.app_id);
             }
           }
         } catch (apiError) {
@@ -436,6 +515,7 @@ export function AgentDetail() {
           if (roleData.app_id) {
             fetchCvmStats(roleData.app_id);
             fetchCvmAttestation(roleData.app_id);
+            fetchCvmComposition(roleData.app_id);
           }
         }
       } else {
@@ -459,6 +539,7 @@ export function AgentDetail() {
             if (roleData.app_id) {
               fetchCvmStats(roleData.app_id);
               fetchCvmAttestation(roleData.app_id);
+              fetchCvmComposition(roleData.app_id);
             }
           } else {
             // 如果API没有返回数据，创建一个基本的Agent对象
@@ -479,6 +560,7 @@ export function AgentDetail() {
             if (roleData.app_id) {
               fetchCvmStats(roleData.app_id);
               fetchCvmAttestation(roleData.app_id);
+              fetchCvmComposition(roleData.app_id);
             }
           }
         } catch (apiError) {
@@ -501,6 +583,7 @@ export function AgentDetail() {
           if (roleData.app_id) {
             fetchCvmStats(roleData.app_id);
             fetchCvmAttestation(roleData.app_id);
+            fetchCvmComposition(roleData.app_id);
           }
         }
       }
@@ -1432,6 +1515,12 @@ export function AgentDetail() {
                   <span className="text-gray-400">Uptime</span>
                   <span className="text-white text-lg">{formatUptime(cvmStats.sysinfo.uptime)}</span>
                 </div>
+                {dockerVersion && (
+                  <div className="flex flex-col">
+                    <span className="text-gray-400">Docker 版本</span>
+                    <span className="text-white text-lg">{dockerVersion}</span>
+                  </div>
+                )}
               </div>
             </Card>
           </Col>
@@ -1494,6 +1583,48 @@ export function AgentDetail() {
             </Card>
           </Col>
         </Row>
+        
+        {/* Docker容器信息 */}
+        {cvmComposition && cvmComposition.containers && cvmComposition.containers.length > 0 && (
+          <Card
+            style={{ backgroundColor: "#1f2937", borderColor: "#374151" }}
+            headStyle={{ backgroundColor: "#111827", borderBottom: "1px solid #374151" }}
+            title={
+              <Typography.Title level={4} style={{ color: "white", margin: 0 }}>
+                Docker 容器
+              </Typography.Title>
+            }
+          >
+            <List
+              dataSource={cvmComposition.containers}
+              renderItem={(container) => {
+                const typedContainer = container as DockerContainer;
+                return (
+                  <List.Item
+                    key={typedContainer.id}
+                    className="border-b border-gray-700 py-3 last:border-b-0"
+                  >
+                    <div className="flex flex-col w-full">
+                      <div className="flex justify-between items-center">
+                        <Typography.Text style={{ color: "white", fontSize: "16px" }}>
+                          {typedContainer.names[0] || "未命名容器"}
+                        </Typography.Text>
+                        <Tag color={typedContainer.state === 'running' ? 'success' : 'error'}>
+                          {typedContainer.state || '未知状态'}
+                        </Tag>
+                      </div>
+                      <div className="mt-2 text-gray-400">
+                        <div>镜像: {typedContainer.image}</div>
+                        <div>创建时间: {new Date(typedContainer.created * 1000).toLocaleString()}</div>
+                        <div>状态: {typedContainer.status}</div>
+                      </div>
+                    </div>
+                  </List.Item>
+                );
+              }}
+            />
+          </Card>
+        )}
       </div>
     );
   };
