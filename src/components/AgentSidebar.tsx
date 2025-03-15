@@ -1,4 +1,4 @@
-import { Box, Flex, Text, Avatar, Button, TextField } from "@radix-ui/themes";
+import { Box, Flex, Text, Button } from "@radix-ui/themes";
 import { useSuiClient, useSignAndExecuteTransaction } from "@mysten/dapp-kit";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
@@ -6,6 +6,7 @@ import { RoleManager } from '@anemonelab/sui-sdk';
 import { useParams } from 'react-router-dom';
 import React from 'react';
 import { notification } from 'antd';
+import { AvatarIcon, DownloadIcon, UploadIcon } from "@radix-ui/react-icons";
 import 'antd';
 
 interface AgentInfo {
@@ -72,7 +73,7 @@ export function AgentSidebar() {
     const interval = setInterval(() => {
       // 重新获取 agentInfo 的逻辑
       refetch(); // 假设您有一个 refetch 函数来重新获取 agentInfo
-    }, 2000); // 每 5000 毫秒（5 秒）刷新一次
+    }, 2000); // 每 2 秒刷新一次
 
     return () => clearInterval(interval); // 清理定时器
   }, []); // 空依赖数组，确保只在组件挂载时设置定时器
@@ -128,7 +129,7 @@ export function AgentSidebar() {
             });
             setIsDepositing(false);
           },
-          onError: (error) => {
+          onError: (error: any) => {
             console.error('Deposit failed:', error);
             openNotification("Deposit failed: " + error.message, "error");
             setIsDepositing(false);
@@ -138,7 +139,7 @@ export function AgentSidebar() {
 
       await refetch();
       setDepositAmount("1");
-    } catch (error) {
+    } catch (error: any) {
       console.error('Deposit failed:', error);
       openNotification("Deposit failed: " + error.message, "error");
       setIsDepositing(false);
@@ -188,7 +189,7 @@ export function AgentSidebar() {
             });
             setIsDepositing(false);
           },
-          onError: (error) => {
+          onError: (error: any) => {
             console.error('Withdraw failed:', error);
             openNotification("Withdraw failed: " + error.message, "error");
             setIsDepositing(false);
@@ -198,7 +199,7 @@ export function AgentSidebar() {
 
       await refetch();
       setWithdrawAmount("1");
-    } catch (error) {
+    } catch (error: any) {
       console.error('Withdraw failed:', error);
       openNotification("Withdraw failed: " + error.message, "error");
       setIsDepositing(false);
@@ -206,117 +207,154 @@ export function AgentSidebar() {
   };
 
   return (
-    <Box className="bg-gray-800 border-r border-gray-600 w-72 h-full p-4"> {/* 使用 Tailwind CSS 样式 */}
-      <Flex direction="column" gap="4">
-        <Avatar
-          size={64} // 使用 Ant Design 的 Avatar 组件
-          src={agentInfo?.url}
-          shape="circle"
-          alt="Agent Avatar"
-        />
+    <>
+      {/* 顶部标题 */}
+      <div className="agent-header">
+        <h2 className="text-xl font-semibold">Agent Profile</h2>
+      </div>
+      
+      {/* Agent信息 */}
+      <div className="agent-info">
+        {/* Agent头像和名称 */}
+        <div className="flex flex-col items-center text-center">
+          <div className="relative">
+            <img
+              src={agentInfo?.url}
+              alt="Agent"
+              className="agent-avatar"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = "https://via.placeholder.com/150?text=Agent";
+              }}
+            />
+            <div className="agent-status"></div>
+          </div>
+          <h3 className="agent-name">{agentInfo?.name || "Loading Agent..."}</h3>
+          <div className="agent-type">AI Assistant</div>
+        </div>
+
+        {/* Agent描述 */}
+        <div className="agent-section">
+          <h4 className="agent-section-title">Description</h4>
+          <p className="agent-description">
+            {agentInfo?.description || "Loading agent description..."}
+          </p>
+        </div>
         
-        <Box>
-          <Box>
-            <Text className="text-lg font-bold mb-2">{agentInfo?.name}</Text>
-          </Box>
-          <Box>
-            <Text className="text-gray-400 text-sm mb-2" style={{ lineHeight: "1.5" }}>
-              {agentInfo?.description}
-            </Text>
-          </Box>
-        </Box>
+        {/* 余额卡片 */}
+        <div className="agent-balance-card">
+          <h4 className="agent-balance-title">Balance</h4>
+          <div className="agent-balance-amount">
+            <AvatarIcon className="mr-2 text-blue-400" />
+            <span className="agent-balance-value">{agentInfo?.balance || "0.00"}</span>
+            <span className="agent-balance-currency">SUI</span>
+          </div>
+        </div>
 
-        <Flex direction="column" gap="2">
-          <Text className="text-gray-400 text-sm">Balance</Text>
-          <Text className="text-xl font-medium">{agentInfo?.balance} SUI</Text>
+        {/* 存款区域 */}
+        <div className="agent-section">
+          <h4 className="agent-section-title">Deposit SUI</h4>
+          
+          {showDepositInput ? (
+            <div className="space-y-3">
+              <div className="relative">
+                <input
+                  type="text"
+                  value={depositAmount}
+                  onChange={(e) => handleDepositAmountChange(e.target.value)}
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 pl-3 pr-12 text-white focus:outline-none focus:border-blue-500 transition-colors"
+                  placeholder="Enter amount"
+                />
+                <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-400">SUI</span>
+              </div>
+              
+              <div className="flex space-x-2">
+                <button
+                  onClick={handleDeposit}
+                  disabled={isDepositing || !depositAmount || Number(depositAmount) <= 0}
+                  className="agent-action-button primary"
+                >
+                  <UploadIcon />
+                  {isDepositing ? "Processing..." : "Deposit"}
+                </button>
+                
+                <button
+                  onClick={() => {
+                    setShowDepositInput(false);
+                    setDepositAmount("1");
+                  }}
+                  disabled={isDepositing}
+                  className="agent-action-button secondary"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowDepositInput(true)}
+              className="agent-action-button primary"
+            >
+              <UploadIcon />
+              Deposit SUI
+            </button>
+          )}
+        </div>
 
-          {/* 存款输入框和按钮 */}
-          <Flex direction="column" gap="2">
-            {showDepositInput ? (
-              <Flex direction="column" gap="2">
-                <div className="deposit-input-container">
-                  <input
-                    type="text"
-                    placeholder=""
-                    value={depositAmount}
-                    onChange={(e) => handleDepositAmountChange(e.target.value)}
-                    className="deposit-input p-2 border border-gray-600 rounded"
-                  />
-                </div>
-                <div className="deposit-actions flex gap-2">
-                  <Button 
-                    className="deposit-button w-full"
-                    onClick={handleDeposit}
-                    disabled={isDepositing || !depositAmount || Number(depositAmount) <= 0}
-                  >
-                    {isDepositing ? 'Depositing...' : 'Confirm Deposit'}
-                  </Button>
-                  <Button 
-                    className="deposit-button secondary w-full"
-                    onClick={() => {
-                      setShowDepositInput(false);
-                      setDepositAmount("1");
-                    }}
-                    disabled={isDepositing}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </Flex>
-            ) : (
-              <Button 
-                className="deposit-button w-full"
-                onClick={() => setShowDepositInput(true)}
-              >
-                Deposit SUI
-              </Button>
-            )}
-          </Flex>
-
-          {/* 取款输入框和按钮 */}
-          <Flex direction="column" gap="2">
-            {showWithdrawInput ? (
-              <Flex direction="column" gap="2">
-                <div className="withdraw-input-container">
-                  <input
-                    type="text"
-                    placeholder="输入取款金额"
-                    value={withdrawAmount}
-                    onChange={(e) => handleWithdrawAmountChange(e.target.value)}
-                    className="withdraw-input p-2 border border-gray-600 rounded"
-                  />
-                </div>
-                <div className="withdraw-actions flex gap-2">
-                  <Button 
-                    className="deposit-button w-full"
-                    onClick={handleWithdraw}
-                    disabled={isDepositing || !withdrawAmount || Number(withdrawAmount) <= 0}
-                  >
-                    {isDepositing ? 'Withdrawing...' : 'Confirm Withdraw'}
-                  </Button>
-                  <Button 
-                    className="deposit-button secondary w-full"
-                    onClick={() => {
-                      setShowWithdrawInput(false);
-                      setWithdrawAmount("1");
-                    }}
-                    disabled={isDepositing}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </Flex>
-            ) : (
-              <Button 
-                className="deposit-button w-full"
-                onClick={() => setShowWithdrawInput(true)}
-              >
-                Withdraw SUI
-              </Button>
-            )}
-          </Flex>
-        </Flex>
-      </Flex>
-    </Box>
+        {/* 取款区域 */}
+        <div className="agent-section">
+          <h4 className="agent-section-title">Withdraw SUI</h4>
+          
+          {showWithdrawInput ? (
+            <div className="space-y-3">
+              <div className="relative">
+                <input
+                  type="text"
+                  value={withdrawAmount}
+                  onChange={(e) => handleWithdrawAmountChange(e.target.value)}
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 pl-3 pr-12 text-white focus:outline-none focus:border-blue-500 transition-colors"
+                  placeholder="Enter amount"
+                />
+                <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-400">SUI</span>
+              </div>
+              
+              <div className="flex space-x-2">
+                <button
+                  onClick={handleWithdraw}
+                  disabled={isDepositing || !withdrawAmount || Number(withdrawAmount) <= 0}
+                  className="agent-action-button primary"
+                >
+                  <DownloadIcon />
+                  {isDepositing ? "Processing..." : "Withdraw"}
+                </button>
+                
+                <button
+                  onClick={() => {
+                    setShowWithdrawInput(false);
+                    setWithdrawAmount("1");
+                  }}
+                  disabled={isDepositing}
+                  className="agent-action-button secondary"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowWithdrawInput(true)}
+              className="agent-action-button primary"
+            >
+              <DownloadIcon />
+              Withdraw SUI
+            </button>
+          )}
+        </div>
+      </div>
+      
+      {/* 底部版本信息 */}
+      <div className="agent-footer">
+        <div className="agent-version">Anemone Agent v1.0</div>
+      </div>
+    </>
   );
 }
