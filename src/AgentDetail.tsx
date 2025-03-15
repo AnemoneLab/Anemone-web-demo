@@ -3,7 +3,7 @@ import { useSuiClient, useCurrentAccount, useSignAndExecuteTransaction } from '@
 import { useParams, useNavigate } from 'react-router-dom';
 import { type SuiObjectResponse } from '@mysten/sui/client';
 import { Typography, Skeleton, Button, Descriptions, Card, Tag, Divider, message, Tooltip, Progress, List, Empty, Row, Col, Space, Tabs, Collapse } from 'antd';
-import { ArrowLeftOutlined, CopyOutlined, WalletOutlined, HeartOutlined, LockOutlined, ClockCircleOutlined, PlusOutlined, ToolOutlined, SaveOutlined, ArrowRightOutlined, ArrowLeftOutlined as ArrowLeft, SafetyCertificateOutlined, CodeOutlined, FileTextOutlined, DashboardOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, CopyOutlined, WalletOutlined, HeartOutlined, LockOutlined, ClockCircleOutlined, PlusOutlined, ToolOutlined, SaveOutlined, ArrowRightOutlined, ArrowLeftOutlined as ArrowLeft, SafetyCertificateOutlined, CodeOutlined, FileTextOutlined, DashboardOutlined, PoweroffOutlined, PlayCircleOutlined, ReloadOutlined } from '@ant-design/icons';
 import './styles.css';
 import { apiClient } from './api/apiClient';
 import { RoleManager } from '@anemonelab/sui-sdk';
@@ -175,11 +175,15 @@ export function AgentDetail() {
   const [attestationLoading, setAttestationLoading] = useState(false);
   const [cvmStats, setCvmStats] = useState<CvmStatsResponse | null>(null);
   const [cvmStatsLoading, setCvmStatsLoading] = useState(false);
+  const [cvmStatusRefreshing, setCvmStatusRefreshing] = useState(false);
   const navigate = useNavigate();
   const suiClient = useSuiClient();
   const currentAccount = useCurrentAccount();
   const { mutate: signAndExecute } = useSignAndExecuteTransaction();
   const { Panel } = Collapse;
+  
+  // 检查当前用户是否是NFT所有者
+  const isOwner = currentAccount && agent?.nftData?.owner === currentAccount.address;
 
   useEffect(() => {
     if (roleId) {
@@ -187,7 +191,7 @@ export function AgentDetail() {
     }
   }, [roleId]);
 
-  // 新增：获取CVM证明信息
+  // 获取CVM证明信息
   const fetchCvmAttestation = async (appId: string) => {
     if (!appId) {
       message.error('无法获取证明信息：缺少App ID');
@@ -213,7 +217,7 @@ export function AgentDetail() {
     }
   };
 
-  // 新增：获取CVM状态信息
+  // 获取CVM状态信息
   const fetchCvmStats = async (appId: string) => {
     if (!appId) {
       message.error('无法获取系统状态信息：缺少App ID');
@@ -236,10 +240,20 @@ export function AgentDetail() {
       message.error('获取CVM系统状态信息失败');
     } finally {
       setCvmStatsLoading(false);
+      setCvmStatusRefreshing(false);
     }
   };
 
-  // 新增：启动CVM
+  // 刷新CVM状态
+  const refreshCvmStatus = () => {
+    if (!agent?.roleData?.app_id) return;
+    
+    setCvmStatusRefreshing(true);
+    fetchCvmStats(agent.roleData.app_id);
+    fetchCvmAttestation(agent.roleData.app_id);
+  };
+
+  // 启动CVM
   const handleStartCvm = async () => {
     if (!agent?.roleData?.app_id) {
       message.error('无法启动CVM：缺少App ID');
@@ -271,7 +285,7 @@ export function AgentDetail() {
     }
   };
 
-  // 新增：停止CVM
+  // 停止CVM
   const handleStopCvm = async () => {
     if (!agent?.roleData?.app_id) {
       message.error('无法停止CVM：缺少App ID');
@@ -302,20 +316,6 @@ export function AgentDetail() {
       message.error('停止CVM失败，请稍后重试');
     }
   };
-
-  // 当标签页切换到CVM Overview标签页时，自动获取系统状态信息
-  useEffect(() => {
-    if (activeTabKey === "cvm-overview" && agent?.roleData?.app_id && !cvmStats) {
-      fetchCvmStats(agent.roleData.app_id);
-    }
-  }, [activeTabKey, agent?.roleData?.app_id, cvmStats]);
-
-  // 当标签页切换到证明信息标签页时，自动获取证明信息
-  useEffect(() => {
-    if (activeTabKey === "attestation" && agent?.roleData?.app_id && !attestation) {
-      fetchCvmAttestation(agent.roleData.app_id);
-    }
-  }, [activeTabKey, agent?.roleData?.app_id, attestation]);
 
   // 根据roleId获取Agent详情
   const fetchAgentDetailsByRoleId = async (roleId: string) => {
@@ -353,6 +353,13 @@ export function AgentDetail() {
         };
         console.log("设置带测试图片的Agent数据:", simpleAgent);
         setAgent(simpleAgent);
+        
+        // 如果有appId，获取CVM状态信息
+        if (roleData.app_id) {
+          fetchCvmStats(roleData.app_id);
+          fetchCvmAttestation(roleData.app_id);
+        }
+        
         setLoading(false);
         return;
       }
@@ -382,6 +389,12 @@ export function AgentDetail() {
             };
             console.log("设置完整Agent数据:", agent);
             setAgent(agent);
+            
+            // 如果有appId，获取CVM状态信息
+            if (roleData.app_id) {
+              fetchCvmStats(roleData.app_id);
+              fetchCvmAttestation(roleData.app_id);
+            }
           } else {
             // 如果API没有返回数据，创建一个基本的Agent对象
             const basicAgent: AgentDetail = {
@@ -396,6 +409,12 @@ export function AgentDetail() {
             };
             console.log("设置基本Agent数据:", basicAgent);
             setAgent(basicAgent);
+            
+            // 如果有appId，获取CVM状态信息
+            if (roleData.app_id) {
+              fetchCvmStats(roleData.app_id);
+              fetchCvmAttestation(roleData.app_id);
+            }
           }
         } catch (apiError) {
           console.error("获取API Agent数据出错:", apiError);
@@ -412,6 +431,12 @@ export function AgentDetail() {
           };
           console.log("设置基本Agent数据:", basicAgent);
           setAgent(basicAgent);
+          
+          // 如果有appId，获取CVM状态信息
+          if (roleData.app_id) {
+            fetchCvmStats(roleData.app_id);
+            fetchCvmAttestation(roleData.app_id);
+          }
         }
       } else {
         // 通过API获取Agent信息
@@ -429,6 +454,12 @@ export function AgentDetail() {
             };
             console.log("设置完整Agent数据:", agent);
             setAgent(agent);
+            
+            // 如果有appId，获取CVM状态信息
+            if (roleData.app_id) {
+              fetchCvmStats(roleData.app_id);
+              fetchCvmAttestation(roleData.app_id);
+            }
           } else {
             // 如果API没有返回数据，创建一个基本的Agent对象
             const basicAgent: AgentDetail = {
@@ -443,6 +474,12 @@ export function AgentDetail() {
             };
             console.log("设置基本Agent数据:", basicAgent);
             setAgent(basicAgent);
+            
+            // 如果有appId，获取CVM状态信息
+            if (roleData.app_id) {
+              fetchCvmStats(roleData.app_id);
+              fetchCvmAttestation(roleData.app_id);
+            }
           }
         } catch (apiError) {
           console.error("获取API Agent数据出错:", apiError);
@@ -459,6 +496,12 @@ export function AgentDetail() {
           };
           console.log("设置基本Agent数据:", basicAgent);
           setAgent(basicAgent);
+          
+          // 如果有appId，获取CVM状态信息
+          if (roleData.app_id) {
+            fetchCvmStats(roleData.app_id);
+            fetchCvmAttestation(roleData.app_id);
+          }
         }
       }
     } catch (error) {
@@ -468,6 +511,20 @@ export function AgentDetail() {
       setLoading(false);
     }
   };
+
+  // 当标签页切换到CVM Overview标签页时，刷新系统状态信息
+  useEffect(() => {
+    if (activeTabKey === "cvm-overview" && agent?.roleData?.app_id) {
+      refreshCvmStatus();
+    }
+  }, [activeTabKey, agent?.roleData?.app_id]);
+
+  // 当标签页切换到证明信息标签页时，刷新证明信息
+  useEffect(() => {
+    if (activeTabKey === "attestation" && agent?.roleData?.app_id) {
+      fetchCvmAttestation(agent.roleData.app_id);
+    }
+  }, [activeTabKey, agent?.roleData?.app_id]);
 
   // 获取Role链上数据
   const fetchRoleData = async (roleId: string): Promise<RoleData | undefined> => {
@@ -1307,26 +1364,16 @@ export function AgentDetail() {
     if (!cvmStats.is_online || !cvmStats.sysinfo) {
       return (
         <div className="space-y-6">
-          {/* 控制按钮区域 */}
-          <div className="flex justify-between items-center mb-4">
-            <Card
-              style={{ backgroundColor: "#1f2937", borderColor: "#374151", width: "100%" }}
-              headStyle={{ backgroundColor: "#111827", borderBottom: "1px solid #374151" }}
-            >
-              <div className="text-center py-6">
-                <Typography.Title level={4} style={{ color: "white", margin: "0 0 20px 0" }}>
-                  CVM当前处于离线状态
-                </Typography.Title>
-                <Button 
-                  type="primary"
-                  size="large"
-                  onClick={handleStartCvm}
-                >
-                  启动CVM
-                </Button>
-              </div>
-            </Card>
-          </div>
+          <Card
+            style={{ backgroundColor: "#1f2937", borderColor: "#374151", width: "100%" }}
+            headStyle={{ backgroundColor: "#111827", borderBottom: "1px solid #374151" }}
+          >
+            <div className="text-center py-6">
+              <Typography.Title level={4} style={{ color: "white", margin: "0 0 20px 0" }}>
+                CVM当前处于离线状态
+              </Typography.Title>
+            </div>
+          </Card>
         </div>
       );
     }
@@ -1356,17 +1403,6 @@ export function AgentDetail() {
     
     return (
       <div className="space-y-6">
-        {/* 控制按钮区域 */}
-        <div className="flex justify-end mb-4">
-          <Button 
-            type="primary" 
-            danger
-            onClick={handleStopCvm}
-          >
-            关闭CVM
-          </Button>
-        </div>
-        
         <Row gutter={16}>
           {/* 系统信息 */}
           <Col span={8}>
@@ -1485,14 +1521,14 @@ export function AgentDetail() {
               title={
                 <Typography.Title level={2} style={{ color: "white", margin: 0 }}>
                   {agent.name || agent.nftData?.name || "未命名Agent"}
-                  {attestation ? 
-                    (attestation.is_online ? 
+                  {cvmStats ? 
+                    (cvmStats.is_online ? 
                       <Tag color="success" style={{ marginLeft: 12 }}>在线</Tag> : 
                       <Tag color="error" style={{ marginLeft: 12 }}>离线</Tag>)
                     : 
                     (agent.roleData?.is_active ? 
-                      <Tag color="success" style={{ marginLeft: 12 }}>已激活</Tag> : 
-                      <Tag color="error" style={{ marginLeft: 12 }}>未激活</Tag>)
+                      <Tag color="success" style={{ marginLeft: 12 }}>在线</Tag> : 
+                      <Tag color="error" style={{ marginLeft: 12 }}>离线</Tag>)
                   }
                   {agent.roleData?.is_locked && 
                     <Tag color="warning" style={{ marginLeft: 12 }}>已锁定</Tag>
@@ -1522,18 +1558,104 @@ export function AgentDetail() {
                       }}
                     />
                   ) : (
-                    <img 
-                      src="https://via.placeholder.com/180?text=Agent+NFT" 
-                      alt="Agent NFT Placeholder" 
-                      style={{ 
+                    <div
+                      style={{
                         width: "100%",
                         maxWidth: "180px",
-                        maxHeight: "180px",
-                        borderRadius: "8px", 
+                        height: "180px",
+                        borderRadius: "8px",
                         border: "1px solid #374151",
-                        objectFit: "cover"
+                        backgroundColor: "#374151",
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        color: "white",
+                        fontSize: "18px"
                       }}
+                    >
+                      无图片
+                    </div>
+                  )}
+                  
+                  {/* 在图片下方显示健康度 */}
+                  <div className="mt-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <Typography.Text style={{ color: "white" }}>
+                        <HeartOutlined style={{ marginRight: "8px", color: "#ef4444" }} />
+                        健康度
+                      </Typography.Text>
+                      <Typography.Text style={{ color: "white" }}>
+                        {agent.roleData?.health ? calculateHealthPercentage(agent.roleData.health) : 0}%
+                      </Typography.Text>
+                    </div>
+                    <Progress 
+                      percent={agent.roleData?.health ? calculateHealthPercentage(agent.roleData.health) : 0} 
+                      size="small" 
+                      status="active"
+                      showInfo={false}
+                      strokeColor="#ef4444"
                     />
+                  </div>
+                  
+                  {/* CVM控制按钮区域 */}
+                  {agent.roleData?.app_id && isOwner && (
+                    <div className="mt-4">
+                      <div className="flex justify-end mb-2">
+                        <Button 
+                          type="text" 
+                          icon={<ReloadOutlined />} 
+                          size="small"
+                          loading={cvmStatusRefreshing}
+                          onClick={refreshCvmStatus}
+                          style={{ color: "white" }}
+                        />
+                      </div>
+                      {cvmStatsLoading ? (
+                        <Button 
+                          loading
+                          block
+                        >
+                          加载中...
+                        </Button>
+                      ) : (
+                        // 仅NFT所有者可见的控制按钮
+                        cvmStats && cvmStats.is_online ? (
+                          <Button 
+                            type="primary" 
+                            danger
+                            block
+                            icon={<PoweroffOutlined />}
+                            onClick={handleStopCvm}
+                          >
+                            关闭CVM
+                          </Button>
+                        ) : (
+                          <Button 
+                            type="primary"
+                            block
+                            icon={<PlayCircleOutlined />}
+                            onClick={handleStartCvm}
+                          >
+                            启动CVM
+                          </Button>
+                        )
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* SUI余额 */}
+                  {agent.roleData?.balance !== undefined && Number(agent.roleData.balance) > 0 && (
+                    <div className="mt-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <Typography.Text style={{ color: "white" }}>
+                          <WalletOutlined style={{ marginRight: "8px", color: "#1e40af" }} />
+                          SUI余额
+                        </Typography.Text>
+                        <Typography.Text style={{ color: "white" }}>
+                          {formatSuiBalance(agent.roleData.balance)} SUI
+                        </Typography.Text>
+                      </div>
+                    </div>
                   )}
                 </div>
                 
@@ -1543,159 +1665,123 @@ export function AgentDetail() {
                     {agent.description || agent.nftData?.description || "无描述"}
                   </Typography.Paragraph>
                   
-                  {/* 健康度指示器 */}
-                  {agent.roleData?.health !== undefined && Number(agent.roleData.health) > 0 && (
-                    <div className="mb-6">
-                      <div className="flex justify-between mb-2">
-                        <Typography.Text style={{ color: "#d1d5db" }}>健康度</Typography.Text>
-                        <Typography.Text style={{ color: "#d1d5db" }}>
-                          {Number(agent.roleData.health) / 1000000000} 点
-                        </Typography.Text>
-                      </div>
-                      <Progress 
-                        percent={calculateHealthPercentage(agent.roleData.health)} 
-                        status={
-                          calculateHealthPercentage(agent.roleData.health) > 50 ? "success" : 
-                          calculateHealthPercentage(agent.roleData.health) > 20 ? "normal" : "exception"
-                        }
-                        strokeColor={
-                          calculateHealthPercentage(agent.roleData.health) > 50 ? "#52c41a" : 
-                          calculateHealthPercentage(agent.roleData.health) > 20 ? "#1890ff" : "#ff4d4f"
-                        }
-                      />
-                    </div>
-                  )}
-                  
-                  {/* SUI余额 */}
-                  {agent.roleData?.balance !== undefined && Number(agent.roleData.balance) > 0 && (
-                    <div className="mb-6 flex justify-between items-center">
-                      <Typography.Text style={{ color: "#d1d5db", fontSize: "16px" }}>
-                        <WalletOutlined style={{ marginRight: "8px" }} />
-                        SUI余额
-                      </Typography.Text>
-                      <Tag color="#1e40af" style={{ fontSize: "14px" }}>
-                        {formatSuiBalance(agent.roleData.balance)} SUI
-                      </Tag>
-                    </div>
-                  )}
+                  {/* 使用Tabs组件展示不同类型的信息 */}
+                  <Tabs 
+                    defaultActiveKey="info"
+                    activeKey={activeTabKey}
+                    onChange={setActiveTabKey}
+                    type="card"
+                    style={{ color: "white" }}
+                    className="custom-dark-tabs"
+                    items={[
+                      {
+                        key: "info",
+                        label: <span style={{ color: activeTabKey === "info" ? "#1890ff" : "white", fontWeight: "bold" }}>基本信息</span>,
+                        children: (
+                          <>
+                            <Descriptions 
+                              bordered 
+                              column={1}
+                              contentStyle={{ color: "white", backgroundColor: "transparent" }}
+                              labelStyle={{ color: "#9ca3af", backgroundColor: "transparent" }}
+                              style={{ backgroundColor: "transparent" }}
+                            >
+                              {/* Address */}
+                              <Descriptions.Item label="钱包地址" span={3}>
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                  <span style={{ wordBreak: "break-all" }}>{agent.address}</span>
+                                  <CopyOutlined 
+                                    style={{ cursor: "pointer", marginLeft: "8px" }} 
+                                    onClick={() => handleCopy(agent.address)}
+                                  />
+                                </div>
+                              </Descriptions.Item>
+                              
+                              {/* Role ID */}
+                              <Descriptions.Item label="Role ID" span={3}>
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                  <span style={{ wordBreak: "break-all" }}>{agent.role_id}</span>
+                                  <CopyOutlined 
+                                    style={{ cursor: "pointer", marginLeft: "8px" }} 
+                                    onClick={() => handleCopy(agent.role_id)}
+                                  />
+                                </div>
+                              </Descriptions.Item>
+                              
+                              {/* NFT ID */}
+                              <Descriptions.Item label="NFT ID" span={3}>
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                  <span style={{ wordBreak: "break-all" }}>{agent.nft_id}</span>
+                                  <CopyOutlined 
+                                    style={{ cursor: "pointer", marginLeft: "8px" }} 
+                                    onClick={() => handleCopy(agent.nft_id)}
+                                  />
+                                </div>
+                              </Descriptions.Item>
+                              
+                              {/* App ID - 如果有 */}
+                              {agent.roleData?.app_id && (
+                                <Descriptions.Item label="App ID" span={3}>
+                                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                    <span style={{ wordBreak: "break-all" }}>{agent.roleData.app_id}</span>
+                                    <CopyOutlined 
+                                      style={{ cursor: "pointer", marginLeft: "8px" }} 
+                                      onClick={() => handleCopy(agent.roleData?.app_id)}
+                                    />
+                                  </div>
+                                </Descriptions.Item>
+                              )}
+                              
+                              {/* 所有者 */}
+                              <Descriptions.Item label="所有者" span={3}>
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                  <span style={{ wordBreak: "break-all" }}>{agent.nftData?.owner || "未知"}</span>
+                                  {agent.nftData?.owner && (
+                                    <CopyOutlined 
+                                      className="copy-icon" 
+                                      onClick={() => handleCopy(agent.nftData?.owner)}
+                                    />
+                                  )}
+                                </div>
+                              </Descriptions.Item>
+                              
+                              {/* 创建时间 */}
+                              {agent.created_at && !agent.created_at.includes('1970') && (
+                                <Descriptions.Item label="创建时间" span={3}>
+                                  {new Date(agent.created_at).toLocaleString()}
+                                </Descriptions.Item>
+                              )}
+                              
+                              {/* 最后更新纪元 */}
+                              <Descriptions.Item label="最后更新纪元" span={3}>
+                                <div style={{ display: "flex", alignItems: "center" }}>
+                                  <ClockCircleOutlined style={{ marginRight: "8px" }} />
+                                  {agent.roleData?.last_epoch ? String(agent.roleData.last_epoch) : "未知"}
+                                </div>
+                              </Descriptions.Item>
+                              
+                              {/* 不活跃纪元数 */}
+                              <Descriptions.Item label="不活跃纪元数" span={3}>
+                                {agent.roleData?.inactive_epochs ? String(agent.roleData.inactive_epochs) : "0"}
+                              </Descriptions.Item>
+                            </Descriptions>
+                          </>
+                        ),
+                      },
+                      {
+                        key: "cvm-overview",
+                        label: <span style={{ color: activeTabKey === "cvm-overview" ? "#1890ff" : "white", fontWeight: "bold" }}><DashboardOutlined style={{ marginRight: "8px" }} />CVM Overview</span>,
+                        children: renderCvmOverviewTab(),
+                      },
+                      {
+                        key: "attestation",
+                        label: <span style={{ color: activeTabKey === "attestation" ? "#1890ff" : "white", fontWeight: "bold" }}>CVM证明</span>,
+                        children: renderAttestationTab(),
+                      }
+                    ]}
+                  />
                 </div>
               </div>
-              
-              {/* 标签页切换 */}
-              <Tabs
-                activeKey={activeTabKey}
-                onChange={setActiveTabKey}
-                style={{ marginTop: "20px" }}
-                className="custom-dark-tabs"
-                tabBarStyle={{ color: "white", fontWeight: "bold" }}
-                items={[
-                  {
-                    key: "info",
-                    label: <span style={{ color: "white", fontWeight: "bold" }}>基本信息</span>,
-                    children: (
-                      <>
-                        {/* 详细信息区域 - 独立占据整行 */}
-                        <Descriptions
-                          bordered
-                          column={{ xxl: 3, xl: 3, lg: 2, md: 2, sm: 1, xs: 1 }}
-                          labelStyle={{ color: "#9ca3af", backgroundColor: "#111827" }}
-                          contentStyle={{ color: "#d1d5db", backgroundColor: "#1f2937" }}
-                          style={{ marginTop: "24px" }}
-                        >
-                          {/* Role ID */}
-                          <Descriptions.Item label="Role ID" span={3}>
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                              <span style={{ wordBreak: "break-all" }}>{agent.role_id}</span>
-                              <CopyOutlined 
-                                style={{ cursor: "pointer", marginLeft: "8px" }} 
-                                onClick={() => handleCopy(agent.role_id)}
-                              />
-                            </div>
-                          </Descriptions.Item>
-                          
-                          {/* NFT ID */}
-                          <Descriptions.Item label="NFT ID" span={3}>
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                              <span style={{ wordBreak: "break-all" }}>{agent.nft_id}</span>
-                              <CopyOutlined 
-                                style={{ cursor: "pointer", marginLeft: "8px" }} 
-                                onClick={() => handleCopy(agent.nft_id)}
-                              />
-                            </div>
-                          </Descriptions.Item>
-                          
-                          {/* 钱包地址 */}
-                          <Descriptions.Item label="钱包地址" span={3}>
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                              <span style={{ wordBreak: "break-all" }}>{agent.address}</span>
-                              <CopyOutlined 
-                                style={{ cursor: "pointer", marginLeft: "8px" }} 
-                                onClick={() => handleCopy(agent.address)}
-                              />
-                            </div>
-                          </Descriptions.Item>
-                          
-                          {/* App ID - 新增显示 */}
-                          {agent.roleData?.app_id && (
-                            <Descriptions.Item label="App ID" span={3}>
-                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                <span style={{ wordBreak: "break-all" }}>{agent.roleData.app_id}</span>
-                                <CopyOutlined 
-                                  style={{ cursor: "pointer", marginLeft: "8px" }} 
-                                  onClick={() => handleCopy(agent.roleData?.app_id)}
-                                />
-                              </div>
-                            </Descriptions.Item>
-                          )}
-                          
-                          {/* 所有者 */}
-                          <Descriptions.Item label="所有者" span={3}>
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                              <span style={{ wordBreak: "break-all" }}>{agent.nftData?.owner || "未知"}</span>
-                              {agent.nftData?.owner && (
-                                <CopyOutlined 
-                                  className="copy-icon" 
-                                  onClick={() => handleCopy(agent.nftData?.owner)}
-                                />
-                              )}
-                            </div>
-                          </Descriptions.Item>
-                          
-                          {/* 创建时间 */}
-                          {agent.created_at && !agent.created_at.includes('1970') && (
-                            <Descriptions.Item label="创建时间" span={3}>
-                              {new Date(agent.created_at).toLocaleString()}
-                            </Descriptions.Item>
-                          )}
-                          
-                          {/* 最后更新纪元 */}
-                          <Descriptions.Item label="最后更新纪元" span={3}>
-                            <div style={{ display: "flex", alignItems: "center" }}>
-                              <ClockCircleOutlined style={{ marginRight: "8px" }} />
-                              {agent.roleData?.last_epoch ? String(agent.roleData.last_epoch) : "未知"}
-                            </div>
-                          </Descriptions.Item>
-                          
-                          {/* 不活跃纪元数 */}
-                          <Descriptions.Item label="不活跃纪元数" span={3}>
-                            {agent.roleData?.inactive_epochs ? String(agent.roleData.inactive_epochs) : "0"}
-                          </Descriptions.Item>
-                        </Descriptions>
-                      </>
-                    ),
-                  },
-                  {
-                    key: "cvm-overview",
-                    label: <span style={{ color: "white", fontWeight: "bold" }}><DashboardOutlined style={{ marginRight: "8px" }} />CVM Overview</span>,
-                    children: renderCvmOverviewTab(),
-                  },
-                  {
-                    key: "attestation",
-                    label: <span style={{ color: "white", fontWeight: "bold" }}>CVM证明</span>,
-                    children: renderAttestationTab(),
-                  }
-                ]}
-              />
             </Card>
             
             {/* 技能列表卡片 */}
@@ -1709,7 +1795,7 @@ export function AgentDetail() {
                     技能列表
                   </Typography.Title>
                   {/* 技能管理按钮 - 仅对NFT所有者显示 */}
-                  {currentAccount && agent.nftData?.owner === currentAccount.address && !editingSkills && (
+                  {isOwner && !editingSkills && (
                     <Button 
                       type="primary" 
                       icon={<PlusOutlined />} 
@@ -1738,144 +1824,144 @@ export function AgentDetail() {
                 </div>
               }
             >
-              {/* 非编辑模式 - 显示当前技能列表 */}
-              {!editingSkills ? (
-                skillsLoading ? (
-                  <Skeleton active paragraph={{ rows: 3 }} />
-                ) : agentSkills.length > 0 ? (
-                  <List
-                    dataSource={agentSkills}
-                    renderItem={skill => (
-                      <List.Item
-                        key={skill.object_id}
-                        className="border-b border-gray-700 py-3 last:border-b-0"
-                      >
-                        <div className="flex justify-between items-center w-full">
-                          <div>
-                            <Typography.Text style={{ color: "white", fontSize: "16px" }}>
-                              {skill.name || "未命名技能"}
-                            </Typography.Text>
-                            {skill.description && (
-                              <Typography.Paragraph style={{ color: "#9ca3af", margin: "4px 0 0 0" }}>
-                                {skill.description}
-                              </Typography.Paragraph>
-                            )}
-                          </div>
-                          <Button 
-                            type="link" 
-                            onClick={() => navigate(`/skill/${skill.object_id}`)}
-                          >
-                            查看详情
-                          </Button>
-                        </div>
-                      </List.Item>
-                    )}
-                  />
-                ) : (
-                  <Empty 
-                    description={
-                      <span style={{ color: "#9ca3af" }}>
-                        该Agent尚未添加任何技能
-                      </span>
-                    }
-                    image={Empty.PRESENTED_IMAGE_SIMPLE} 
-                  />
-                )
-              ) : (
-                /* 编辑模式 - 左右两栏布局 */
-                <Row gutter={24}>
-                  {/* 左侧 - 已选技能 */}
-                  <Col span={12}>
-                    <div className="bg-gray-800 p-4 rounded-lg">
-                      <Typography.Title level={4} style={{ color: "white", marginBottom: "16px" }}>
-                        已选择的技能
-                      </Typography.Title>
-                      
-                      {selectedSkills.length === 0 ? (
-                        <Empty 
-                          description={<span style={{ color: "#9ca3af" }}>尚未选择任何技能</span>}
-                          image={Empty.PRESENTED_IMAGE_SIMPLE}
-                        />
-                      ) : (
-                        <List
-                          dataSource={[...agentSkills, ...availableSkills]
-                            .filter((skill, index, self) => 
-                              // 确保不重复
-                              selectedSkills.includes(skill.object_id) && 
-                              index === self.findIndex(s => s.object_id === skill.object_id)
-                            )}
-                          renderItem={skill => (
-                            <List.Item
-                              key={skill.object_id}
-                              className="border border-gray-700 rounded-lg mb-2 hover:bg-gray-700 transition-all"
-                            >
-                              <div className="flex justify-between items-center w-full p-2">
-                                <div>
-                                  <Typography.Text style={{ color: "white", fontSize: "14px" }}>
-                                    {skill.name || "未命名技能"}
-                                  </Typography.Text>
-                                  <div className="text-gray-400 text-xs mt-1">
-                                    费用: {formatFee(skill.fee)} SUI
-                                  </div>
-                                </div>
-                                <Button 
-                                  type="text"
-                                  icon={<ArrowRightOutlined />}
-                                  onClick={() => handleRemoveSkill(skill.object_id)}
-                                />
-                              </div>
-                            </List.Item>
-                          )}
-                        />
-                      )}
-                    </div>
-                  </Col>
-                  
-                  {/* 右侧 - 可用技能 */}
-                  <Col span={12}>
-                    <div className="bg-gray-800 p-4 rounded-lg">
-                      <Typography.Title level={4} style={{ color: "white", marginBottom: "16px" }}>
-                        可用技能
-                      </Typography.Title>
-                      
-                      {allSkillsLoading ? (
-                        <Skeleton active paragraph={{ rows: 3 }} />
-                      ) : (
-                        <List
-                          dataSource={[...agentSkills, ...availableSkills]
-                            .filter((skill, index, self) => 
-                              // 只显示未选择的技能，并确保不重复
-                              !selectedSkills.includes(skill.object_id) && 
-                              index === self.findIndex(s => s.object_id === skill.object_id)
-                            )}
-                          renderItem={skill => (
-                            <List.Item
-                              key={skill.object_id}
-                              className="border border-gray-700 rounded-lg mb-2 hover:bg-gray-700 transition-all"
-                            >
-                              <div className="flex justify-between items-center w-full p-2">
-                                <Button 
-                                  type="text"
-                                  icon={<ArrowLeftOutlined />}
-                                  onClick={() => handleAddSkill(skill.object_id)}
-                                />
-                                <div className="text-right">
-                                  <Typography.Text style={{ color: "white", fontSize: "14px" }}>
-                                    {skill.name || "未命名技能"}
-                                  </Typography.Text>
-                                  <div className="text-gray-400 text-xs mt-1">
-                                    费用: {formatFee(skill.fee)} SUI
-                                  </div>
-                                </div>
-                              </div>
-                            </List.Item>
-                          )}
-                        />
-                      )}
-                    </div>
-                  </Col>
-                </Row>
-              )}
+               {/* 非编辑模式 - 显示当前技能列表 */}
+               {!editingSkills ? (
+                 skillsLoading ? (
+                   <Skeleton active paragraph={{ rows: 3 }} />
+                 ) : agentSkills.length > 0 ? (
+                   <List
+                     dataSource={agentSkills}
+                     renderItem={skill => (
+                       <List.Item
+                         key={skill.object_id}
+                         className="border-b border-gray-700 py-3 last:border-b-0"
+                       >
+                         <div className="flex justify-between items-center w-full">
+                           <div>
+                             <Typography.Text style={{ color: "white", fontSize: "16px" }}>
+                               {skill.name || "未命名技能"}
+                             </Typography.Text>
+                             {skill.description && (
+                               <Typography.Paragraph style={{ color: "#9ca3af", margin: "4px 0 0 0" }}>
+                                 {skill.description}
+                               </Typography.Paragraph>
+                             )}
+                           </div>
+                           <Button 
+                             type="link" 
+                             onClick={() => navigate(`/skill/${skill.object_id}`)}
+                           >
+                             查看详情
+                           </Button>
+                         </div>
+                       </List.Item>
+                     )}
+                   />
+                 ) : (
+                   <Empty 
+                     description={
+                       <span style={{ color: "#9ca3af" }}>
+                         该Agent尚未添加任何技能
+                       </span>
+                     }
+                     image={Empty.PRESENTED_IMAGE_SIMPLE} 
+                   />
+                 )
+               ) : (
+                 /* 编辑模式 - 左右两栏布局 */
+                 <Row gutter={24}>
+                   {/* 左侧 - 已选技能 */}
+                   <Col span={12}>
+                     <div className="bg-gray-800 p-4 rounded-lg">
+                       <Typography.Title level={4} style={{ color: "white", marginBottom: "16px" }}>
+                         已选择的技能
+                       </Typography.Title>
+                       
+                       {selectedSkills.length === 0 ? (
+                         <Empty 
+                           description={<span style={{ color: "#9ca3af" }}>尚未选择任何技能</span>}
+                           image={Empty.PRESENTED_IMAGE_SIMPLE}
+                         />
+                       ) : (
+                         <List
+                           dataSource={[...agentSkills, ...availableSkills]
+                             .filter((skill, index, self) => 
+                               // 确保不重复
+                               selectedSkills.includes(skill.object_id) && 
+                               index === self.findIndex(s => s.object_id === skill.object_id)
+                             )}
+                           renderItem={skill => (
+                             <List.Item
+                               key={skill.object_id}
+                               className="border border-gray-700 rounded-lg mb-2 hover:bg-gray-700 transition-all"
+                             >
+                               <div className="flex justify-between items-center w-full p-2">
+                                 <div>
+                                   <Typography.Text style={{ color: "white", fontSize: "14px" }}>
+                                     {skill.name || "未命名技能"}
+                                   </Typography.Text>
+                                   <div className="text-gray-400 text-xs mt-1">
+                                     费用: {formatFee(skill.fee)} SUI
+                                   </div>
+                                 </div>
+                                 <Button 
+                                   type="text"
+                                   icon={<ArrowRightOutlined />}
+                                   onClick={() => handleRemoveSkill(skill.object_id)}
+                                 />
+                               </div>
+                             </List.Item>
+                           )}
+                         />
+                       )}
+                     </div>
+                   </Col>
+                   
+                   {/* 右侧 - 可用技能 */}
+                   <Col span={12}>
+                     <div className="bg-gray-800 p-4 rounded-lg">
+                       <Typography.Title level={4} style={{ color: "white", marginBottom: "16px" }}>
+                         可用技能
+                       </Typography.Title>
+                       
+                       {allSkillsLoading ? (
+                         <Skeleton active paragraph={{ rows: 3 }} />
+                       ) : (
+                         <List
+                           dataSource={[...agentSkills, ...availableSkills]
+                             .filter((skill, index, self) => 
+                               // 只显示未选择的技能，并确保不重复
+                               !selectedSkills.includes(skill.object_id) && 
+                               index === self.findIndex(s => s.object_id === skill.object_id)
+                             )}
+                           renderItem={skill => (
+                             <List.Item
+                               key={skill.object_id}
+                               className="border border-gray-700 rounded-lg mb-2 hover:bg-gray-700 transition-all"
+                             >
+                               <div className="flex justify-between items-center w-full p-2">
+                                 <Button 
+                                   type="text"
+                                   icon={<ArrowLeft />}
+                                   onClick={() => handleAddSkill(skill.object_id)}
+                                 />
+                                 <div className="text-right">
+                                   <Typography.Text style={{ color: "white", fontSize: "14px" }}>
+                                     {skill.name || "未命名技能"}
+                                   </Typography.Text>
+                                   <div className="text-gray-400 text-xs mt-1">
+                                     费用: {formatFee(skill.fee)} SUI
+                                   </div>
+                                 </div>
+                               </div>
+                             </List.Item>
+                           )}
+                         />
+                       )}
+                     </div>
+                   </Col>
+                 </Row>
+               )}
             </Card>
           </div>
         ) : (
