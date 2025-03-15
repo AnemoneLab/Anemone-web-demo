@@ -110,5 +110,43 @@ export const apiClient = {
             url: `/skill/${objectId}`,
             method: "DELETE",
         });
+    },
+
+    // Agent API
+    getAgentByRoleId: (roleId: string) => {
+        return fetcher({
+            url: `/agent/${roleId}`,
+            method: "GET",
+        });
+    },
+    
+    getAllAgents: () => {
+        return fetcher({
+            url: `/agents`,
+            method: "GET",
+        });
+    },
+    
+    generateAgentAddress: () => {
+        return fetcher({
+            url: `/generate-agent-address`,
+            method: "POST",
+        });
+    },
+    
+    createAgent: (data: { address: string; nft_id: string; role_id: string; cvm_id: number }) => {
+        return fetcher({
+            url: `/create-agent`,
+            method: "POST",
+            body: data,
+        });
+    },
+    
+    // CVM Attestation API
+    getCvmAttestation: (appId: string) => {
+        return fetcher({
+            url: `/cvm/attestation/${appId}`,
+            method: "GET",
+        });
     }
 }; 

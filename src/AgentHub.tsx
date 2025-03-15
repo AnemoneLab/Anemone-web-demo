@@ -5,6 +5,7 @@ import { List, Card, Typography, Image, Alert, Tooltip, message, Skeleton, Butto
 import { CopyOutlined, UserOutlined, GlobalOutlined } from '@ant-design/icons';
 import './styles.css'
 import { useNavigate } from 'react-router-dom';
+import { apiClient } from './api/apiClient';
 
 // Agent类型定义
 interface Agent {
@@ -34,8 +35,7 @@ export function AgentHub() {
         const fetchAgents = async () => {
             // 不论是否连接钱包，都获取所有Agent
             try {
-                const response = await fetch('http://localhost:3000/agents');
-                const data = await response.json();
+                const data = await apiClient.getAllAgents();
                 console.log('Data:', data);
                 if (data.success) {
                     const updatedAgents = await Promise.all(data.agents.map(async (agent: { nft_id: string; }) => {

@@ -13,6 +13,7 @@ import ClipLoader from "react-spinners/ClipLoader";
 
 import { Toast } from "./components/Toast";
 import { useToast } from "./hooks/useToast";
+import { apiClient } from './api/apiClient';
 
 
 export function AgentMint() {
@@ -57,18 +58,7 @@ export function AgentMint() {
         setIsLoading(true);
         showToast("Generating address...", "info");
 
-        const response = await fetch("http://localhost:3000/generate-agent-address", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error("没有可用的CVM，请稍后再试或联系管理员部署更多CVM");
-        }
-
-        const data = await response.json();
+        const data = await apiClient.generateAgentAddress();
         
         if (!data.success) {
           throw new Error(data.message || "获取地址失败");
@@ -134,28 +124,13 @@ export function AgentMint() {
                 console.log('Created bot NFT with ID:', botNftId);
 
                 // Store NFT mapping
-                const mappingResponse = await fetch("http://localhost:3000/create-agent", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        address: address,
-                        nft_id: botNftId,
-                        role_id: roleId,
-                        cvm_id: cvmId
-                    }),
+                const mappingData = await apiClient.createAgent({
+                    address: address,
+                    nft_id: botNftId!,
+                    role_id: roleId!,
+                    cvm_id: cvmId!
                 });
-
-                console.log("NFT Mapping response status:", mappingResponse.status);
                 
-                if (!mappingResponse.ok) {
-                    const errorText = await mappingResponse.text();
-                    console.error("NFT Mapping error:", errorText);
-                    throw new Error(`Failed to store NFT mapping: ${errorText}`);
-                }
-
-                const mappingData = await mappingResponse.json();
                 console.log("NFT mapping response:", mappingData);
                 
                 if (!mappingData.success) {

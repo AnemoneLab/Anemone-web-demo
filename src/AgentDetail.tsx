@@ -159,14 +159,8 @@ export function AgentDetail() {
     
     setAttestationLoading(true);
     try {
-      // 使用后端API获取证明信息
-      const response = await fetch(`http://localhost:3000/cvm/attestation/${appId}`);
-      
-      if (!response.ok) {
-        throw new Error(`获取证明信息失败: ${response.status}`);
-      }
-      
-      const attestationData = await response.json();
+      // 使用apiClient获取证明信息
+      const attestationData = await apiClient.getCvmAttestation(appId);
       console.log('获取到CVM证明信息:', attestationData);
       
       if (attestationData.success && attestationData.data) {
@@ -241,8 +235,7 @@ export function AgentDetail() {
         
         // 通过API获取Agent信息（可选，如果API支持按roleId查询）
         try {
-          const apiResponse = await fetch(`http://localhost:3000/agent/${roleId}`);
-          const apiData = await apiResponse.json();
+          const apiData = await apiClient.getAgentByRoleId(roleId);
           console.log("API返回的Agent数据:", apiData);
           
           if (apiData.success && apiData.agent) {
@@ -289,8 +282,7 @@ export function AgentDetail() {
       } else {
         // 通过API获取Agent信息
         try {
-          const apiResponse = await fetch(`http://localhost:3000/agent/${roleId}`);
-          const apiData = await apiResponse.json();
+          const apiData = await apiClient.getAgentByRoleId(roleId);
           console.log("API返回的Agent数据:", apiData);
           
           if (apiData.success && apiData.agent) {
@@ -1328,7 +1320,7 @@ export function AgentDetail() {
                                 <span style={{ wordBreak: "break-all" }}>{agent.roleData.app_id}</span>
                                 <CopyOutlined 
                                   style={{ cursor: "pointer", marginLeft: "8px" }} 
-                                  onClick={() => handleCopy(agent.roleData.app_id)}
+                                  onClick={() => handleCopy(agent.roleData?.app_id)}
                                 />
                               </div>
                             </Descriptions.Item>
@@ -1341,7 +1333,7 @@ export function AgentDetail() {
                               {agent.nftData?.owner && (
                                 <CopyOutlined 
                                   className="copy-icon" 
-                                  onClick={() => handleCopy(agent.nftData.owner)}
+                                  onClick={() => handleCopy(agent.nftData?.owner)}
                                 />
                               )}
                             </div>
